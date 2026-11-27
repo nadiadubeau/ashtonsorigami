@@ -20,7 +20,7 @@ CURRENT = os.path.join(ROOT, "current")
 PORT = int(os.environ.get("AO_PORT", "8091"))
 HOST = os.environ.get("AO_HOST", "127.0.0.1")
 VERSION = open(os.path.join(APP_DIR, "VERSION")).read().strip()
-COLLS = ("orders", "products", "notes", "leads", "costs")
+COLLS = ("orders", "products", "notes", "leads", "costs", "ideas")
 DOCS = ("settings", "colours")
 KEEP_VERSIONS = 10
 SESSION_DAYS = 30
@@ -452,9 +452,13 @@ def dropbox_sync():
         costs = sorted(snap["records"]["costs"].values(), key=lambda c: c.get("date") or "")
         dbx_upload(folder + "/Costs.csv", csv_bytes([["Date", "What", "Category", "Amount", "Notes"]] +
                    [[c.get("date"), c.get("desc"), c.get("cat"), money(c.get("amount")), c.get("notes")] for c in costs]))
+        ideas = sorted(snap["records"]["ideas"].values(), key=lambda i: i.get("created") or 0)
+        dbx_upload(folder + "/Product ideas.csv", csv_bytes([["Idea", "Details", "Status", "Possible price"]] +
+                   [[i.get("title"), i.get("details"), i.get("status"), money(i.get("price"))] for i in ideas]))
         sent = STATE.setdefault("photoHashes", {})
         pics = [("Products/" + safe_name(p.get("name")) + ".jpg", p.get("photo")) for p in prods]
         pics += [("Receipts/" + safe_name((c.get("date") or "") + " " + (c.get("desc") or "")) + ".jpg", c.get("photo")) for c in costs]
+        pics += [("Ideas/" + safe_name(i.get("title")) + ".jpg", i.get("photo")) for i in ideas]
         pics += [("Paper colours/" + safe_name(c.get("name")) + ".jpg", c.get("img")) for c in snap["docs"]["colours"]["data"]]
         for path, url in pics:
             b = data_url_bytes(url)
@@ -491,6 +495,7 @@ def export_data(snap=None):
             "notes": [clean(r) for r in s["records"]["notes"].values()],
             "leads": [clean(r) for r in s["records"]["leads"].values()],
             "costs": [clean(r) for r in s["records"]["costs"].values()],
+            "ideas": [clean(r) for r in s["records"]["ideas"].values()],
             "settings": s["docs"]["settings"]["data"], "colours": s["docs"]["colours"]["data"]}
 
 

@@ -188,6 +188,14 @@ header nav button{border-bottom:6px solid var(--sc)!important}
 body.phone header{border-bottom:4px solid #f4b942!important}
 body.phone header nav button{border-bottom:0!important;border-top:6px solid var(--sc)!important}
 .fieldhead{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--indigo);margin:12px 0 2px}
+
+/* ---------- address search, ideas ---------- */
+.acwrap{position:relative;margin:6px 0 4px}
+#acres{display:flex;flex-direction:column;max-height:260px;overflow:auto;border-radius:8px}
+#acres:not(:empty){border:1px solid var(--line);background:#fff;margin-top:4px}
+.acitem{text-align:left;font:inherit;background:none;border:0;border-bottom:1px solid var(--line);padding:10px;cursor:pointer;color:var(--ink)}
+.acitem:hover{background:#fdf0d5}
+.orow .thumb{width:52px;height:52px}
 </style>
 </head>
 <body class="phone">
@@ -243,9 +251,66 @@ const LEAD_STATES=["New","Contacted","Ordered","Not interested"];
 const COST_CATS=["Paper","Supplies","Postage","Packaging","Fees","Other"];
 const leadBadge=s=>`<span class="badge s${{New:0,Contacted:1,Ordered:3,"Not interested":4}[s]??0}">${esc(s)}</span>`;
 const sumCosts=a=>a.reduce((t,c)=>t+cents(c.amount),0)/100;
+const PROVS=[["AB","Alberta"],["BC","British Columbia"],["MB","Manitoba"],["NB","New Brunswick"],["NL","Newfoundland and Labrador"],["NS","Nova Scotia"],["NT","Northwest Territories"],["NU","Nunavut"],["ON","Ontario"],["PE","Prince Edward Island"],["QC","Quebec"],["SK","Saskatchewan"],["YT","Yukon"]];
+const blankAddr=()=>({line1:"",line2:"",city:"",prov:"",postal:"",country:"Canada"});
+const isCanada=a=>/^(canada|ca|can)?$/i.test((a.country||"").trim());
+const fixPostal=p=>{const s=(p||"").toUpperCase().replace(/\s+/g,"");return /^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(s)?s.slice(0,3)+" "+s.slice(3):(p||"").toUpperCase().trim()};
+const postalOK=p=>/^[A-Z]\d[A-Z] \d[A-Z]\d$/.test(fixPostal(p));
+/* Canada Post style: street, unit line, CITY PROV  POSTAL, country if not Canada */
+const fmtAddr=a=>[a.line1,a.line2,[a.city,[a.prov,isCanada(a)?fixPostal(a.postal):a.postal].filter(Boolean).join("  ")].filter(x=>x&&x.trim()).join(" "),isCanada(a)?"":a.country].map(x=>(x||"").trim()).filter(Boolean).join("\n");
+/* best guess at splitting an older free-text address into the new boxes */
+function parseAddr(s){
+  const a=blankAddr(), lines=(s||"").split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  if(!lines.length)return a;
+  let last=lines[lines.length-1];
+  const pc=last.match(/([A-Za-z]\d[A-Za-z])\s*(\d[A-Za-z]\d)\s*$/);
+  if(pc){a.postal=(pc[1]+" "+pc[2]).toUpperCase();last=last.slice(0,pc.index).trim()}
+  const pv=last.match(/[ ,]+([A-Za-z]{2})\.?$/);
+  if(pv&&PROVS.some(p=>p[0]===pv[1].toUpperCase())){a.prov=pv[1].toUpperCase();last=last.slice(0,pv.index).trim()}
+  if((pc||a.prov)&&lines.length>1){a.city=last.replace(/,$/,"");lines.pop()}
+  a.line1=lines[0]||"";a.line2=lines.slice(1).join(", ");
+  return a;
+}
+function addrFields(a){
+  const can=isCanada(a), key=db.settings.acKey;
+  return `<div class="fieldhead" style="margin-top:14px">Shipping address</div>
+  ${key?`<div class="acwrap"><input id="acsearch" placeholder="🔎 Search for the address (Canada Post)" autocomplete="off"><div id="acres"></div></div>`:""}
+  <label>Street address</label><input data-a="line1" autocomplete="off" placeholder="123 Main St" value="${esc(a.line1)}">
+  <label>Apartment, unit, PO box (optional)</label><input data-a="line2" autocomplete="off" value="${esc(a.line2)}">
+  <div class="two"><div><label>City / town</label><input data-a="city" value="${esc(a.city)}"></div>
+  <div><label>${can?"Province":"State / province"}</label>${can?`<select data-a="prov"><option value="">Choose…</option>${PROVS.map(([c,n])=>`<option value="${c}" ${a.prov===c?"selected":""}>${n}</option>`).join("")}</select>`:`<input data-a="prov" value="${esc(a.prov)}">`}</div></div>
+  <div class="two"><div><label>${can?"Postal code":"ZIP / postal code"}</label><input data-a="postal" autocapitalize="characters" placeholder="${can?"A1A 1A1":""}" value="${esc(a.postal)}"></div>
+  <div><label>Country</label><input data-a="country" list="countries" value="${esc(a.country)}"><datalist id="countries"><option>Canada</option><option>United States</option></datalist></div></div>
+  ${a.postal&&can&&!postalOK(a.postal)?'<div class="warn" id="pcwarn">That postal code doesn’t look right (A1A 1A1).</div>':'<div class="warn" id="pcwarn"></div>'}`;
+}
+let acTimer=0, acSeq=0;
+async function acFind(term,lastId){
+  const key=db.settings.acKey, seq=++acSeq, box=$("#acres");
+  if(!box)return;
+  if(!term.trim()&&!lastId){box.innerHTML="";return}
+  const q=new URLSearchParams({Key:key,SearchTerm:term,LastId:lastId||"",Country:"CAN",LanguagePreference:"en",MaxSuggestions:"8",MaxResults:"100"});
+  try{
+    const j=await (await fetch("https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Find/v2.10/json3.ws?"+q)).json();
+    if(seq!==acSeq)return;
+    const items=j.Items||[];
+    if(items[0]&&items[0].Error)return box.innerHTML=`<div class="warn" style="padding:8px">Canada Post: ${esc(items[0].Description||items[0].Cause||"error")}</div>`;
+    box.innerHTML=items.map(it=>`<button type="button" class="acitem" data-acid="${esc(it.Id)}" data-acnext="${esc(it.Next)}">${esc(it.Text)} <span class="mute">${esc(it.Description||"")}</span></button>`).join("")||'<div class="mute" style="padding:8px">No matches</div>';
+  }catch(e){if(seq===acSeq)box.innerHTML='<div class="warn" style="padding:8px">Couldn’t reach Canada Post.</div>'}
+}
+async function acRetrieve(id){
+  const q=new URLSearchParams({Key:db.settings.acKey,Id:id});
+  try{
+    const j=await (await fetch("https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Retrieve/v2.11/json3.ws?"+q)).json();
+    const items=j.Items||[], it=items.find(x=>x.Language==="ENG")||items[0];
+    if(!it||it.Error)return toast("Canada Post: "+((it&&it.Description)||"couldn’t get that address"));
+    draft.addr={line1:it.Line1||"",line2:it.Line2||"",city:it.City||"",prov:it.ProvinceCode||"",postal:it.PostalCode||"",country:it.CountryName||"Canada"};
+    if(/^canada$/i.test(draft.addr.country))draft.addr.country="Canada";
+    draft.address=fmtAddr(draft.addr);render();toast("Address filled in");
+  }catch(e){toast("Couldn’t reach Canada Post.")}
+}
 const shipLabel=o=>o.shipName?"Shipping ("+o.shipName+")":"Shipping";
 /* ---------- server sync ---------- */
-const COLLS=["orders","products","notes","leads","costs"], DOCS=["settings","colours"];
+const COLLS=["orders","products","notes","leads","costs","ideas"], DOCS=["settings","colours"];
 let db=null, me=null, version="", status={}, admin=null, adminLoading=false;
 let rev=0, base={}, sent={}, syncing=false, again=false, online=true, timer=0;
 const K=(c,id)=>c+":"+id;
@@ -281,7 +346,7 @@ function pending(){
   DOCS.forEach(k=>{if(k==="settings"&&me.role!=="admin")return;const j=JSON.stringify(db[k]);if(sent[k]!==j)items.push({coll:k,base:base[k],data:db[k],json:j})});
   return items;
 }
-const editing=()=>["new","edit","product","lead","cost"].includes(route.split("/")[0])||$("#dlg").open||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||"");
+const editing=()=>["new","edit","product","lead","cost","idea"].includes(route.split("/")[0])||$("#dlg").open||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||"");
 const what=c=>({orders:"this order",products:"this product",notes:"this note",colours:"the paper colours",settings:"Settings"})[c];
 function save(){clearTimeout(timer);timer=setTimeout(flush,400);pill()}
 async function flush(){
@@ -438,7 +503,7 @@ const views={
   new(){return orderForm()},
   edit(id){return orderForm(id)},
   products(){
-    return `<h1>Product list</h1><div class="subtabs"><button class="on" data-go="products">Products</button><button class="" data-go="colours">Paper colours</button></div><button class="btn pri wide" data-go="product/new" style="margin-bottom:10px">＋ New product</button>
+    return `<h1>Product list</h1><div class="subtabs"><button class="on" data-go="products">Products</button><button class="" data-go="colours">Paper colours</button><button class="" data-go="ideas">Ideas</button></div><button class="btn pri wide" data-go="product/new" style="margin-bottom:10px">＋ New product</button>
     <div class="grid three">${db.products.map(p=>`<button class="card tap" data-go="product/${p.id}"><div class="row" style="flex-wrap:nowrap">${p.photo?`<img class="thumb" src="${esc(p.photo)}" alt="">`:'<div class="thumb">◇</div>'}<div style="flex:1;min-width:0"><b>${esc(p.name)}</b><div class="mute">${esc(p.desc)}</div><b>${money(p.price)}</b>${p.active?"":' <span class="badge s4">Hidden</span>'}</div></div></button>`).join("")||'<div class="card mute">No products yet.</div>'}</div>`;
   },
   product(id){
@@ -497,8 +562,24 @@ const views={
     <div class="row" style="margin-bottom:10px"><button class="btn pri" data-act="savecost">Save</button><button class="btn" data-go="costs">Cancel</button>${c?'<button class="btn" data-act="delcost">Delete</button>':""}</div>
     ${c?historyBox(c):""}`;
   },
+  ideas(){
+    const IS=["Idea","Trying it","Added to products","Not doing"], list=db.ideas.slice().sort((a,b)=>IS.indexOf(a.status)-IS.indexOf(b.status)||(b.created||0)-(a.created||0));
+    return `<h1>Product ideas</h1><div class="subtabs"><button class="" data-go="products">Products</button><button class="" data-go="colours">Paper colours</button><button class="on" data-go="ideas">Ideas</button></div><button class="btn pri wide" data-go="idea/new" style="margin-bottom:10px">＋ New idea</button>
+    <div class="olist">${list.map(i=>`<button class="card tap orow" data-go="idea/${i.id}">${i.photo?`<img class="thumb" src="${esc(i.photo)}" alt="">`:'<div class="thumb">💡</div>'}<div class="ol"><b>${esc(i.title)}</b>${i.details?`<div class="mute oitems">${esc(i.details)}</div>`:""}</div><div class="or"><span class="badge s${{"Idea":0,"Trying it":2,"Added to products":3,"Not doing":4}[i.status]??0}">${esc(i.status)}</span>${i.price!==""&&i.price!=null?`<b>${money(i.price)}</b>`:""}</div></button>`).join("")||'<div class="card mute">No ideas yet. Jot down things you might make one day.</div>'}</div>`;
+  },
+  idea(id){
+    const key="i:"+id, it=db.ideas.find(x=>x.id===id);
+    if(draftKey!==key){draftKey=key;draft=it?snap(it):{id:uid(),title:"",details:"",status:"Idea",price:"",photo:"",created:Date.now()}}
+    return `<h1>${it?"Product idea":"New idea"}</h1><div class="card">
+    <label>Idea *</label><input data-f="title" placeholder="e.g. Origami lucky cat" value="${esc(draft.title)}">
+    <label>Details</label><textarea data-f="details" placeholder="Size, paper, who it’s for, where you saw it…">${esc(draft.details)}</textarea>
+    <div class="two"><div><label>Status</label><select data-f="status">${["Idea","Trying it","Added to products","Not doing"].map(s=>`<option ${draft.status===s?"selected":""}>${s}</option>`).join("")}</select></div><div><label>Possible price ($)</label><input type="number" min="0" step="0.01" inputmode="decimal" data-f="price" value="${esc(draft.price)}"></div></div>
+    <label>Photo or sketch (optional)</label>${draft.photo?`<img src="${esc(draft.photo)}" alt="" style="max-width:100%;max-height:260px;border-radius:10px;display:block;margin-bottom:6px"><button class="btn sm" data-act="rmphoto">Remove photo</button>`:""}<input type="file" id="photo" accept="image/*"></div>
+    <div class="row" style="margin-bottom:10px"><button class="btn pri" data-act="saveidea">Save</button>${it&&it.status!=="Added to products"?'<button class="btn" data-act="ideatoproduct">Add to product list →</button>':""}<button class="btn" data-go="ideas">Cancel</button>${it?'<button class="btn" data-act="delidea">Delete</button>':""}</div>
+    ${it?historyBox(it):""}`;
+  },
   colours(){
-    return `<h1>Paper colours</h1><div class="subtabs"><button class="" data-go="products">Products</button><button class="on" data-go="colours">Paper colours</button></div>
+    return `<h1>Paper colours</h1><div class="subtabs"><button class="" data-go="products">Products</button><button class="on" data-go="colours">Paper colours</button><button class="" data-go="ideas">Ideas</button></div>
     <div class="card"><div class="mute" style="margin-bottom:10px">These show as choices on every order item. “Multi-colour” is always offered too. Tap a swatch to pick a colour, or tap 📷 to take a photo of the paper or choose one from your phone. Removing a colour doesn’t change existing orders.</div>
     ${db.colours.map((c,i)=>`<div class="colrow"><div class="swbox" style="background:${c.img?`url('${c.img}')`:esc(c.hex)}">${c.img?"":`<input type="color" aria-label="Pick colour" data-col="${i}" data-k="hex" value="${esc(c.hex)}">`}</div><input aria-label="Colour name" placeholder="Colour name" data-col="${i}" data-k="name" value="${esc(c.name)}"><label class="btn sm photobtn" style="margin:0;display:flex;align-items:center" title="Take a photo or choose one">📷<input type="file" accept="image/*" data-colphoto="${i}"></label><button class="btn sm" data-act="rmcol" data-v="${i}">✕</button>${c.img?`<div class="sub"><span class="mute">Using photo</span><button class="btn sm" data-act="rmcolphoto" data-v="${i}">Use colour picker instead</button></div>`:""}</div>`).join("")||'<div class="mute">No colours yet.</div>'}
     <button class="btn pri" data-act="addcol">＋ Add paper colour</button></div>`;
@@ -513,6 +594,7 @@ const views={
     const A=admin, d=A.dropbox, g=A.github, st=A.state;
     return `<h1>Settings</h1>
     <div class="card"><h2 style="margin-top:0">App</h2><label>App name</label><input id="sname" value="${esc(s.name)}">
+    <label>Canada Post AddressComplete key (optional, turns on address search)</label><input id="sackey" autocomplete="off" value="${esc(s.acKey||"")}">
     <label>Notes for Claude</label><textarea id="sclaude" placeholder="Standing instructions for Claude when it uses this app">${esc(s.claude)}</textarea></div>
     <div class="card"><h2 style="margin-top:0">Shipping prices</h2><div class="mute">The first one is filled in on every new order. Changing a price does not change existing orders.</div>
     ${s.rates.map((r,i)=>`<div class="rate"><input aria-label="Shipping name" placeholder="Name" data-rate="${i}" data-k="name" value="${esc(r.name)}"><input aria-label="Price" type="number" min="0" step="0.01" inputmode="decimal" data-rate="${i}" data-k="price" value="${esc(r.price)}"><button class="btn sm" data-act="rmrate" data-v="${i}">✕</button></div>`).join("")}
@@ -592,13 +674,14 @@ function orderForm(id){
   const existing=id&&db.orders.find(o=>o.id===id), key="o:"+(id||"new");
   if(id&&!existing)return `<div class="card">Order not found.</div>`;
   if(draftKey!==key){draftKey=key;const r=db.settings.rates[0];draft=existing?snap(existing):{customer:"",contact:"",address:"",due:"",shipping:r?r.price:"",shipName:r?r.name:"",paid:false,notes:"",tracking:"",lines:[],checks:{}}}
+  if(!draft.addr)draft.addr=draft.address?parseAddr(draft.address):blankAddr();
   const picked=db.settings.rates.find(r=>r.name===draft.shipName&&+r.price===+draft.shipping);
   const prods=db.products.filter(p=>p.active);
   return `<h1>${existing?"Edit order #"+pad(existing.number):"New order"}</h1>
   <div class="split"><div>
   <div class="card"><label>Customer name *</label><input data-f="customer" value="${esc(draft.customer)}">
   <label>How to reach them</label><input data-f="contact" placeholder="Marketplace name, phone or email" value="${esc(draft.contact)}">
-  <label>Shipping address</label><textarea data-f="address">${esc(draft.address)}</textarea>
+  ${addrFields(draft.addr)}
   <label>Due date</label><input type="date" data-f="due" value="${esc(draft.due)}">
   <div class="two"><div><label>Shipping</label><select id="shiprate">${db.settings.rates.map(r=>`<option value="${esc(r.id)}" ${picked===r?"selected":""}>${esc(r.name)} — ${money(r.price)}</option>`).join("")}<option value="" ${picked?"":"selected"}>Other amount</option></select></div><div><label>Shipping charge ($)</label><input type="number" min="0" step="0.01" inputmode="decimal" data-f="shipping" value="${esc(draft.shipping)}"></div></div></div>
   </div><div>
@@ -627,9 +710,9 @@ function banners(){
 function render(){
   applyLayout();
   const [v,id]=route.split("/");
-  if(!["new","edit","product","lead","cost"].includes(v)){draft=null;draftKey=""}
+  if(!["new","edit","product","lead","cost","idea"].includes(v)){draft=null;draftKey=""}
   $("#brandname").textContent=db.settings.name;document.title=db.settings.name;
-  const tab={order:"orders",edit:"orders",leads:"orders",lead:"orders",product:"products",colours:"products",cost:"costs",notes:"settings"}[v]||v;
+  const tab={order:"orders",edit:"orders",leads:"orders",lead:"orders",product:"products",colours:"products",ideas:"products",idea:"products",cost:"costs",notes:"settings"}[v]||v;
   $("#nav").innerHTML=[["dash","Dashboard"],["orders","Orders"],["new","＋ New"],["products","Products"],["costs","Costs"],["settings",me.role==="admin"?"Settings":"Account"]].map(([r,t])=>`<button data-go="${r}" class="${tab===r?"on":""}">${t}</button>`).join("");
   $("#app").innerHTML=banners()+(views[v]||views.dash)(id);
   save();
@@ -654,7 +737,7 @@ function download(name,text){
 const notesText=list=>list.map(n=>`[${n.type}] ${n.text}\n  Screen: ${n.screen} · ${when(n.at)} · ${n.device}`).join("\n\n");
 
 /* ---------- actions ---------- */
-const current=()=>{const [v,id]=route.split("/");return ({product:db.products,lead:db.leads,cost:db.costs}[v]||db.orders).find(x=>x.id===id)};
+const current=()=>{const [v,id]=route.split("/");return ({product:db.products,lead:db.leads,cost:db.costs,idea:db.ideas}[v]||db.orders).find(x=>x.id===id)};
 function change(o,label,fn){fn();track(o,label);save();render()}
 const acts={
   note(){
@@ -707,6 +790,7 @@ const acts={
     if(d.lines.some(l=>!l.name.trim()))return toast("Every custom item needs a name.");
     if(d.lines.some(l=>!Number.isInteger(+l.qty)||+l.qty<1))return toast("Quantity must be a whole number, 1 or more.");
     if(d.lines.some(l=>+l.price<0)||+d.shipping<0)return toast("Prices can’t be negative.");
+    if(d.addr){if(isCanada(d.addr)){d.addr.postal=fixPostal(d.addr.postal);if(d.addr.postal&&!postalOK(d.addr.postal))return toast("That postal code doesn’t look right (A1A 1A1).")}d.address=fmtAddr(d.addr)}
     const id=route.split("/")[1];let o=db.orders.find(x=>x.id===id);
     if(o){
       if(o.status>0&&unpriced(d))return toast("An accepted order needs a price on every item.");
@@ -739,6 +823,22 @@ const acts={
     go("new");
     Object.assign(draft,{customer:l.name,contact:l.contact,notes:l.interest,leadId:l.id});
     render();toast("Add the items, then Create order.");
+  },
+  saveidea(){
+    if(!draft.title.trim())return toast("Give the idea a name.");
+    if(draft.price!==""&&!(+draft.price>=0))return toast("Price can’t be negative.");
+    let i=db.ideas.find(x=>x.id===draft.id);
+    if(i){Object.assign(i,clone(draft));track(i,"Edited")}else{i=clone(draft);track(i,"Added");db.ideas.push(i)}
+    go("ideas");toast("Saved");
+  },
+  delidea(){const i=current();ask(`<b>Delete “${esc(i.title)}”?</b>`,"Delete",()=>{db.ideas=db.ideas.filter(x=>x!==i);go("ideas")})},
+  ideatoproduct(){
+    const i=current();
+    ask(`<b>Add “${esc(i.title)}” to the product list?</b><label>Price ($)</label><input id="ipprice" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(i.price)}">`,"Add",()=>{
+      const pr=$("#ipprice").value.trim();if(pr===""||!(+pr>=0)){toast("Add a price of 0 or more.");return false}
+      const p={id:uid(),name:i.title,desc:i.details,price:Math.round(+pr*100)/100,active:true,photo:i.photo||""};track(p,"Added from an idea");db.products.push(p);
+      change(i,"Added to products",()=>{i.status="Added to products";i.productId=p.id});toast("Added to your product list");
+    });
   },
   savecost(){
     if(!draft.desc.trim())return toast("Say what the cost was for.");
@@ -824,8 +924,10 @@ async function folderPicker(path){
 
 
 document.addEventListener("click",e=>{
+  const ac=e.target.closest("[data-acid]");
+  if(ac){ac.dataset.acnext==="Find"?acFind($("#acsearch").value,ac.dataset.acid):acRetrieve(ac.dataset.acid);return}
   const g=e.target.closest("[data-go]");
-  if(g){const r=g.dataset.go;if(r==="new"||/^(edit|product|lead|cost)\//.test(r)){draft=null;draftKey=""}return go(r)}
+  if(g){const r=g.dataset.go;if(r==="new"||/^(edit|product|lead|cost|idea)\//.test(r)){draft=null;draftKey=""}return go(r)}
   const a=e.target.closest("[data-act]");
   if(a)acts[a.dataset.act](a.dataset.v,a);
 });
@@ -833,6 +935,7 @@ document.addEventListener("input",e=>{
   const t=e.target;
   if(t.id==="search"){search=t.value;$("#list").innerHTML=orderList();return}
   if(t.id==="sname"){db.settings.name=t.value;$("#brandname").textContent=t.value;return save()}
+  if(t.id==="sackey"){db.settings.acKey=t.value.trim();return save()}
   if(t.id==="sclaude"){db.settings.claude=t.value;return save()}
   if(t.id==="sreturn"){db.settings.returnAddress=t.value;return save()}
   if(t.dataset.rate!==undefined){db.settings.rates[+t.dataset.rate][t.dataset.k]=t.dataset.k==="price"?Math.max(0,+t.value||0):t.value;return save()}
@@ -840,6 +943,11 @@ document.addEventListener("input",e=>{
   if(!draft)return;
   if(t.id==="shiprate"||t.dataset.check!==undefined)return;
   if(t.dataset.f)draft[t.dataset.f]=t.type==="checkbox"?t.checked:t.value;
+  if(t.dataset.a){draft.addr[t.dataset.a]=t.value;draft.address=fmtAddr(draft.addr);
+    if(t.dataset.a==="country"&&isCanada(draft.addr)!==!!document.querySelector("select[data-a=prov]"))render();
+    if(t.dataset.a==="postal"){const w=$("#pcwarn");if(w)w.textContent=isCanada(draft.addr)&&t.value.trim()&&!postalOK(t.value)?"That postal code doesn’t look right (A1A 1A1).":""}
+    return}
+  if(t.id==="acsearch"){clearTimeout(acTimer);acTimer=setTimeout(()=>acFind(t.value),250);return}
   if(t.dataset.l!==undefined)draft.lines[+t.dataset.l][t.dataset.k]=t.value;
   if(t.dataset.f==="shipping"){draft.shipName="";$("#shiprate").value=""}
   if($("#ftotal"))$("#ftotal").textContent=money(total(draft));
