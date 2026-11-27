@@ -189,12 +189,7 @@ body.phone header{border-bottom:4px solid #f4b942!important}
 body.phone header nav button{border-bottom:0!important;border-top:6px solid var(--sc)!important}
 .fieldhead{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--indigo);margin:12px 0 2px}
 
-/* ---------- address search, ideas ---------- */
-.acwrap{position:relative;margin:6px 0 4px}
-#acres{display:flex;flex-direction:column;max-height:260px;overflow:auto;border-radius:8px}
-#acres:not(:empty){border:1px solid var(--line);background:#fff;margin-top:4px}
-.acitem{text-align:left;font:inherit;background:none;border:0;border-bottom:1px solid var(--line);padding:10px;cursor:pointer;color:var(--ink)}
-.acitem:hover{background:#fdf0d5}
+/* ---------- ideas ---------- */
 .orow .thumb{width:52px;height:52px}
 </style>
 </head>
@@ -272,9 +267,8 @@ function parseAddr(s){
   return a;
 }
 function addrFields(a){
-  const can=isCanada(a), key=db.settings.acKey;
+  const can=isCanada(a);
   return `<div class="fieldhead" style="margin-top:14px">Shipping address</div>
-  ${key?`<div class="acwrap"><input id="acsearch" placeholder="🔎 Search for the address (Canada Post)" autocomplete="off"><div id="acres"></div></div>`:""}
   <label>Street address</label><input data-a="line1" autocomplete="off" placeholder="123 Main St" value="${esc(a.line1)}">
   <label>Apartment, unit, PO box (optional)</label><input data-a="line2" autocomplete="off" value="${esc(a.line2)}">
   <div class="two"><div><label>City / town</label><input data-a="city" value="${esc(a.city)}"></div>
@@ -282,31 +276,6 @@ function addrFields(a){
   <div class="two"><div><label>${can?"Postal code":"ZIP / postal code"}</label><input data-a="postal" autocapitalize="characters" placeholder="${can?"A1A 1A1":""}" value="${esc(a.postal)}"></div>
   <div><label>Country</label><input data-a="country" list="countries" value="${esc(a.country)}"><datalist id="countries"><option>Canada</option><option>United States</option></datalist></div></div>
   ${a.postal&&can&&!postalOK(a.postal)?'<div class="warn" id="pcwarn">That postal code doesn’t look right (A1A 1A1).</div>':'<div class="warn" id="pcwarn"></div>'}`;
-}
-let acTimer=0, acSeq=0;
-async function acFind(term,lastId){
-  const key=db.settings.acKey, seq=++acSeq, box=$("#acres");
-  if(!box)return;
-  if(!term.trim()&&!lastId){box.innerHTML="";return}
-  const q=new URLSearchParams({Key:key,SearchTerm:term,LastId:lastId||"",Country:"CAN",LanguagePreference:"en",MaxSuggestions:"8",MaxResults:"100"});
-  try{
-    const j=await (await fetch("https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Find/v2.10/json3.ws?"+q)).json();
-    if(seq!==acSeq)return;
-    const items=j.Items||[];
-    if(items[0]&&items[0].Error)return box.innerHTML=`<div class="warn" style="padding:8px">Canada Post: ${esc(items[0].Description||items[0].Cause||"error")}</div>`;
-    box.innerHTML=items.map(it=>`<button type="button" class="acitem" data-acid="${esc(it.Id)}" data-acnext="${esc(it.Next)}">${esc(it.Text)} <span class="mute">${esc(it.Description||"")}</span></button>`).join("")||'<div class="mute" style="padding:8px">No matches</div>';
-  }catch(e){if(seq===acSeq)box.innerHTML='<div class="warn" style="padding:8px">Couldn’t reach Canada Post.</div>'}
-}
-async function acRetrieve(id){
-  const q=new URLSearchParams({Key:db.settings.acKey,Id:id});
-  try{
-    const j=await (await fetch("https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive/Retrieve/v2.11/json3.ws?"+q)).json();
-    const items=j.Items||[], it=items.find(x=>x.Language==="ENG")||items[0];
-    if(!it||it.Error)return toast("Canada Post: "+((it&&it.Description)||"couldn’t get that address"));
-    draft.addr={line1:it.Line1||"",line2:it.Line2||"",city:it.City||"",prov:it.ProvinceCode||"",postal:it.PostalCode||"",country:it.CountryName||"Canada"};
-    if(/^canada$/i.test(draft.addr.country))draft.addr.country="Canada";
-    draft.address=fmtAddr(draft.addr);render();toast("Address filled in");
-  }catch(e){toast("Couldn’t reach Canada Post.")}
 }
 const shipLabel=o=>o.shipName?"Shipping ("+o.shipName+")":"Shipping";
 /* ---------- server sync ---------- */
@@ -594,7 +563,6 @@ const views={
     const A=admin, d=A.dropbox, g=A.github, st=A.state;
     return `<h1>Settings</h1>
     <div class="card"><h2 style="margin-top:0">App</h2><label>App name</label><input id="sname" value="${esc(s.name)}">
-    <label>Canada Post AddressComplete key (optional, turns on address search)</label><input id="sackey" autocomplete="off" value="${esc(s.acKey||"")}">
     <label>Notes for Claude</label><textarea id="sclaude" placeholder="Standing instructions for Claude when it uses this app">${esc(s.claude)}</textarea></div>
     <div class="card"><h2 style="margin-top:0">Shipping prices</h2><div class="mute">The first one is filled in on every new order. Changing a price does not change existing orders.</div>
     ${s.rates.map((r,i)=>`<div class="rate"><input aria-label="Shipping name" placeholder="Name" data-rate="${i}" data-k="name" value="${esc(r.name)}"><input aria-label="Price" type="number" min="0" step="0.01" inputmode="decimal" data-rate="${i}" data-k="price" value="${esc(r.price)}"><button class="btn sm" data-act="rmrate" data-v="${i}">✕</button></div>`).join("")}
@@ -924,8 +892,6 @@ async function folderPicker(path){
 
 
 document.addEventListener("click",e=>{
-  const ac=e.target.closest("[data-acid]");
-  if(ac){ac.dataset.acnext==="Find"?acFind($("#acsearch").value,ac.dataset.acid):acRetrieve(ac.dataset.acid);return}
   const g=e.target.closest("[data-go]");
   if(g){const r=g.dataset.go;if(r==="new"||/^(edit|product|lead|cost|idea)\//.test(r)){draft=null;draftKey=""}return go(r)}
   const a=e.target.closest("[data-act]");
@@ -935,7 +901,6 @@ document.addEventListener("input",e=>{
   const t=e.target;
   if(t.id==="search"){search=t.value;$("#list").innerHTML=orderList();return}
   if(t.id==="sname"){db.settings.name=t.value;$("#brandname").textContent=t.value;return save()}
-  if(t.id==="sackey"){db.settings.acKey=t.value.trim();return save()}
   if(t.id==="sclaude"){db.settings.claude=t.value;return save()}
   if(t.id==="sreturn"){db.settings.returnAddress=t.value;return save()}
   if(t.dataset.rate!==undefined){db.settings.rates[+t.dataset.rate][t.dataset.k]=t.dataset.k==="price"?Math.max(0,+t.value||0):t.value;return save()}
@@ -947,7 +912,6 @@ document.addEventListener("input",e=>{
     if(t.dataset.a==="country"&&isCanada(draft.addr)!==!!document.querySelector("select[data-a=prov]"))render();
     if(t.dataset.a==="postal"){const w=$("#pcwarn");if(w)w.textContent=isCanada(draft.addr)&&t.value.trim()&&!postalOK(t.value)?"That postal code doesn’t look right (A1A 1A1).":""}
     return}
-  if(t.id==="acsearch"){clearTimeout(acTimer);acTimer=setTimeout(()=>acFind(t.value),250);return}
   if(t.dataset.l!==undefined)draft.lines[+t.dataset.l][t.dataset.k]=t.value;
   if(t.dataset.f==="shipping"){draft.shipName="";$("#shiprate").value=""}
   if($("#ftotal"))$("#ftotal").textContent=money(total(draft));
