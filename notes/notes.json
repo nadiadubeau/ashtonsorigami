@@ -53,5 +53,16 @@
   "done": false,
   "by": "Nadia",
   "_rev": 65
+ },
+ {
+  "id": "mwz5h2mj6l9v5",
+  "type": "Change",
+  "text": "Items to make should be a pop up window when pressed showing the order in details and then each individual item needs to be checked. Then in this main list it just shows completed when all are made",
+  "screen": "#/order",
+  "at": 1795794155659,
+  "device": "Other",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 66
  }
 ]
