@@ -105,9 +105,9 @@
   "screen": "#/new",
   "at": 1795794812529,
   "device": "Other",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 137
+  "_rev": 139
  },
  {
   "id": "mwz5w8npx9rbx",
@@ -116,8 +116,19 @@
   "screen": "#/dash",
   "at": 1795794863317,
   "device": "Other",
+  "done": true,
+  "by": "Nadia",
+  "_rev": 140
+ },
+ {
+  "id": "mwzj26h3ywbb1",
+  "type": "Idea",
+  "text": "Display time in Vancouver and time in Toronto to the left of “in Dropbox” in the top right corner",
+  "screen": "#/dash",
+  "at": 1795816975431,
+  "device": "Other",
   "done": false,
   "by": "Nadia",
-  "_rev": 138
+  "_rev": 155
  }
 ]
