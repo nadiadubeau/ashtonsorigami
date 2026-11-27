@@ -9,3 +9,7 @@ _Screen #/dash · 2026-11-27 15:14 · Android · Nadia_
 ## [Open] Idea (mwz4ht7e1ekz6)
 Add a costs section where costs related to this business can be added and tracked.
 _Screen #/dash · 2026-11-27 15:15 · Android · Nadia_
+
+## [Open] Idea (mwz4yc53wn3i3)
+aswell as a phone view add a tablet view for using this app on an ipad
+_Screen #/dash · 2026-11-27 15:28 · Windows · Nadia_
