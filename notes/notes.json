@@ -72,9 +72,9 @@
   "screen": "#/order",
   "at": 1795794435351,
   "device": "Other",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 104
+  "_rev": 128
  },
  {
   "id": "mwz5oz76zmq7p",
@@ -83,9 +83,9 @@
   "screen": "#/order",
   "at": 1795794524466,
   "device": "Other",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 113
+  "_rev": 129
  },
  {
   "id": "mwz5psxiuqzh4",
@@ -94,8 +94,8 @@
   "screen": "#/dash",
   "at": 1795794562998,
   "device": "Other",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 114
+  "_rev": 130
  }
 ]
