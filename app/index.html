@@ -163,6 +163,22 @@ body.tablet .check{padding:14px 4px}
   body.tablet .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   body.tablet .stats{grid-template-columns:repeat(6,minmax(0,1fr))}
 }
+
+/* ---------- lists, make-list pop-up ---------- */
+.olist{display:flex;flex-direction:column;gap:8px}
+.olist .card{margin:0}
+button.tap.orow,.orow{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.orow .ol{flex:1;min-width:0}.orow .or{flex:none;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.oitems{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.tablet .orow,body.web .orow{padding:12px 16px}
+button.tap.makebtn,.makebtn{display:flex;align-items:center;gap:12px;background:#fff6e5;border:2px solid #f4b942;border-radius:12px;padding:12px;margin:4px 0 8px;cursor:pointer}
+.makebtn.done{background:#e3f4ef;border-color:#2a9d8f}
+.makebtn .mk{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f4b942;color:#262a45;font-size:18px;flex:none}
+.makebtn.done .mk{background:#1c7368;color:#fff}
+.mkline{border-bottom:2px solid var(--line);padding:10px 0}
+.mkline .check{padding-left:8px}
+.mkline .cols{display:flex;margin:4px 0 2px}
+dialog{width:min(560px,94vw)}
 </style>
 </head>
 <body class="phone">
@@ -199,9 +215,15 @@ const total=o=>(cents(subtotal(o))+cents(o.shipping))/100;
 const unpriced=o=>o.lines.some(l=>l.price===""||l.price==null);
 
 /* ---------- packing checklist and shipping ---------- */
-const PACK=[["env","Address written on envelope"],["ret","Return address written on envelope"],["stamp","Postage stamp attached"],["note","Thank you note put in envelope"]];
-const checkKeys=o=>[...o.lines.map(l=>l.id),...PACK.map(p=>p[0])];
-const left=o=>checkKeys(o).filter(k=>!o.checks[k]).length;
+const PACK=[["env","Address written on envelope"],["ret","Return address written on envelope"],["card","Piece of cardboard put in envelope"],["stamp","Postage stamp attached"],["note","Thank you note put in envelope"]];
+/* each item made gets its own tick: checks["<line id>#<n>"]; an older whole-line tick (checks["<line id>"]) counts as all made */
+const units=l=>Array.from({length:Math.max(1,+l.qty||1)},(_,i)=>l.id+"#"+(i+1));
+const unitDone=(o,l,k)=>!!(o.checks[l.id]||o.checks[k]);
+const madeCount=(o,l)=>units(l).filter(k=>unitDone(o,l,k)).length;
+const itemsLeft=o=>o.lines.reduce((a,l)=>a+units(l).length-madeCount(o,l),0);
+const itemsAll=o=>o.lines.reduce((a,l)=>a+units(l).length,0);
+const checkKeys=o=>[...o.lines.flatMap(l=>[l.id,...units(l)]),...PACK.map(p=>p[0])];
+const left=o=>itemsLeft(o)+PACK.filter(p=>!o.checks[p[0]]).length;
 const defaultRates=()=>[{id:"canada",name:"Within Canada",price:3}];
 const MULTI="Multi-colour";
 const defaultColours=()=>[["Red","#d62f2a"],["Orange","#f28c28"],["Yellow","#f6d13a"],["Green","#3aa655"],["Teal","#2a9d8f"],["Light blue","#6cb4e8"],["Navy","#22366b"],["Purple","#8a63b8"],["Pink","#f49ac1"],["White","#ffffff"],["Black","#222222"],["Gold","#d4af37"],["Silver","#c0c0c0"]].map(([name,hex])=>({id:uid(),name,hex}));
@@ -359,10 +381,10 @@ addEventListener("resize",applyLayout);
 const badge=s=>`<span class="badge s${s}">${STATES[s]}</span>`;
 function orderCard(o){
   const late=o.status<4&&o.due&&o.due<today();
-  return `<button class="card tap" data-go="order/${o.id}">
-  <div class="row between"><b>#${pad(o.number)} · ${esc(o.customer)}</b>${badge(o.status)}</div>
-  <div class="mute">${esc(o.lines.map(l=>l.qty+"× "+l.name+(colText(l)?" ("+colText(l)+")":"")).join(", "))}</div>
-  <div class="row between"><span class="${late?"warn":"mute"}">${o.due?(late?"Overdue: ":"Due ")+day(o.due):"No due date"}</span><span><b>${money(total(o))}</b>${unpriced(o)?' <span class="warn">+ to quote</span>':""} <span class="mute">${o.paid?"· Paid":"· Unpaid"}</span></span></div></button>`;
+  return `<button class="card tap orow" data-go="order/${o.id}">
+  <div class="ol"><b>#${pad(o.number)} · ${esc(o.customer)}</b><div class="mute oitems">${esc(o.lines.map(l=>l.qty+"× "+l.name+(colText(l)?" ("+colText(l)+")":"")).join(", "))}</div>
+  <div class="${late?"warn":"mute"}">${o.due?(late?"Overdue: ":"Due ")+day(o.due):"No due date"}</div></div>
+  <div class="or">${badge(o.status)}<div><b>${money(total(o))}</b>${unpriced(o)?' <span class="warn">+ quote</span>':""}</div><div class="mute">${o.paid?"Paid":"Unpaid"}</div></div></button>`;
 }
 const byDue=(a,b)=>(a.due||"9999").localeCompare(b.due||"9999")||a.number-b.number;
 const views={
@@ -377,14 +399,14 @@ const views={
       ${[[money(sum(open)),"Value of open orders"],[money(sum(os.filter(o=>!o.paid))),"Waiting to be paid"],[money(sum(os.filter(o=>o.paid))),"Paid, all time"],[money(sum(shippedM)),"Shipped this month"],[money(sumCosts(db.costs.filter(c=>(c.date||"").startsWith(month)))),"Costs this month"],[money(sum(os.filter(o=>o.paid))-sumCosts(db.costs)),"Profit, all time (paid − costs)"]].map(([v,t])=>`<div class="card stat" style="margin:0"><b>${v}</b><span>${t}</span></div>`).join("")}
     </div>
     <div class="split"><div><h2>Workflow</h2><div class="card"><table>${STATES.map((s,i)=>`<tr><td><button class="btn sm wide" style="text-align:left" data-act="filter" data-v="${i}">${badge(i)}</button></td><td class="r"><b style="line-height:36px">${os.filter(o=>o.status===i).length}</b></td></tr>`).join("")}</table></div>
-    </div><div><h2>Next due</h2><div class="grid">${open.sort(byDue).slice(0,4).map(orderCard).join("")||'<div class="card mute">No open orders.</div>'}</div>
-    ${(()=>{const f=db.leads.filter(l=>l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status)).sort((a,b)=>a.follow.localeCompare(b.follow));return f.length?`<h2>Follow up today</h2><div class="grid">${f.map(leadCard).join("")}</div>`:""})()}</div></div>`;
+    </div><div><h2>Next due</h2><div class="olist">${open.sort(byDue).slice(0,4).map(orderCard).join("")||'<div class="card mute">No open orders.</div>'}</div>
+    ${(()=>{const f=db.leads.filter(l=>l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status)).sort((a,b)=>a.follow.localeCompare(b.follow));return f.length?`<h2>Follow up today</h2><div class="olist">${f.map(leadCard).join("")}</div>`:""})()}</div></div>`;
   },
   orders(){
     return `<h1>Orders</h1><div class="subtabs"><button class="on" data-go="orders">Orders</button><button class="" data-go="leads">Interested</button></div>
     <div class="chips">${[["open","Open"],...STATES.map((s,i)=>[String(i),s]),["all","All"]].map(([v,t])=>`<button class="${filter===v?"on":""}" data-act="filter" data-v="${v}">${t}</button>`).join("")}</div>
     <input id="search" type="search" placeholder="Search name, number or item" value="${esc(search)}" style="margin-bottom:10px">
-    <div class="grid" id="list">${orderList()}</div>`;
+    <div class="olist" id="list">${orderList()}</div>`;
   },
   order(id){
     const o=db.orders.find(x=>x.id===id); if(!o)return `<div class="card">Order not found.</div>`;
@@ -427,7 +449,7 @@ const views={
     return `<h1>Interested</h1><div class="subtabs"><button class="" data-go="orders">Orders</button><button class="on" data-go="leads">Interested</button></div>
     <button class="btn pri wide" data-go="lead/new" style="margin-bottom:10px">＋ Add interested customer</button>
     <div class="chips"><button class="${leadFilter==="all"?"":"on"}" data-act="leadfilter" data-v="active">Still interested (${active.length})</button><button class="${leadFilter==="all"?"on":""}" data-act="leadfilter" data-v="all">All (${all.length})</button></div>
-    <div class="grid">${list.map(leadCard).join("")||'<div class="card mute">No one here yet. Add people who ask about your origami so you can follow up.</div>'}</div>`;
+    <div class="olist">${list.map(leadCard).join("")||'<div class="card mute">No one here yet. Add people who ask about your origami so you can follow up.</div>'}</div>`;
   },
   lead(id){
     const key="l:"+id, l=db.leads.find(x=>x.id===id);
@@ -525,16 +547,29 @@ const views={
   }
 };
 function checklist(o){
-  const all=checkKeys(o).length, done=all-left(o), ret=db.settings.returnAddress;
+  const all=itemsAll(o)+PACK.length, done=all-left(o), ret=db.settings.returnAddress, il=itemsLeft(o), ia=itemsAll(o);
   const box=(k,html)=>`<label class="check"><input type="checkbox" data-check="${esc(k)}" ${o.checks[k]?"checked":""}><span class="txt">${html}</span></label>`;
   return `<div class="card"><b>Production checklist</b><div class="mute">${done} of ${all} done</div><div class="progress"><i style="width:${done/all*100}%"></i></div>
-  <h2>Items to make</h2>${o.lines.map(l=>box(l.id,`<b>${esc(l.qty)}× ${esc(l.name)}</b>${colours(l)}${l.desc?`<div class="mute">${esc(l.desc)}</div>`:""}`)).join("")}
+  <h2>Items to make</h2><button class="tap makebtn ${il?"":"done"}" data-act="makelist"><span class="mk">${il?"✂":"✓"}</span><span style="flex:1"><b>${il?`${ia-il} of ${ia} made`:"Completed"}</b><div class="mute">${il?"Tap to tick off each item as you make it":"All "+ia+" item"+(ia===1?"":"s")+" made · tap to see"}</div></span><span class="mute">›</span></button>
   <h2>Envelope</h2>${PACK.map(([k,t])=>{const extra=k==="env"?o.address||"No address on this order yet":k==="ret"?ret||"Add your return address in Settings":"";return box(k,esc(t)+(extra?`<div class="mute" style="white-space:pre-wrap">${esc(extra)}</div>`:""))}).join("")}</div>`;
 }
 function leadCard(l){
   const due=l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status);
-  return `<button class="card tap" data-go="lead/${l.id}"><div class="row between"><b>${esc(l.name)}</b>${leadBadge(l.status)}</div>
-  ${l.interest?`<div class="mute">${esc(l.interest)}</div>`:""}<div class="${due?"warn":"mute"}">${l.follow?(due?"Follow up: ":"Follow up ")+day(l.follow):"Added "+day(today(new Date(l.created||Date.now())))}${l.contact?" · "+esc(l.contact):""}</div></button>`;
+  return `<button class="card tap orow" data-go="lead/${l.id}"><div class="ol"><b>${esc(l.name)}</b>
+  ${l.interest?`<div class="mute oitems">${esc(l.interest)}</div>`:""}<div class="${due?"warn":"mute"}">${l.follow?(due?"Follow up: ":"Follow up ")+day(l.follow):"Added "+day(today(new Date(l.created||Date.now())))}${l.contact?" · "+esc(l.contact):""}</div></div><div class="or">${leadBadge(l.status)}</div></button>`;
+}
+function makeDialog(o){
+  const d=$("#dlg"), il=itemsLeft(o);
+  d.innerHTML=`<div class="row between"><b style="font-size:19px">Order #${pad(o.number)} · ${esc(o.customer)}</b>${badge(o.status)}</div>
+  <div class="mute">${o.due?"Due "+day(o.due):"No due date"}${o.contact?" · "+esc(o.contact):""}</div>
+  ${o.notes?`<div class="card" style="margin:10px 0;white-space:pre-wrap">${esc(o.notes)}</div>`:""}
+  <div class="progress" style="margin:12px 0 4px"><i style="width:${(itemsAll(o)-il)/itemsAll(o)*100}%"></i></div><div class="mute">${il?`${itemsAll(o)-il} of ${itemsAll(o)} made`:"All made! 🎉"}</div>
+  <div style="max-height:58vh;overflow:auto;margin-top:6px">${o.lines.map(l=>`<div class="mkline"><div class="row between"><b>${esc(l.qty)}× ${esc(l.name)}</b><span class="mute">${madeCount(o,l)} of ${units(l).length} made</span></div>${colours(l)}${l.desc?`<div class="mute">${esc(l.desc)}</div>`:""}
+    ${units(l).map((k,i)=>`<label class="check"><input type="checkbox" data-unit="${esc(k)}" data-line="${esc(l.id)}" ${unitDone(o,l,k)?"checked":""}><span class="txt">${esc(l.name)} ${i+1}${units(l).length>1?" of "+units(l).length:""}</span></label>`).join("")}</div>`).join("")}</div>
+  <div class="row" style="margin-top:12px"><button class="btn pri" id="mkdone">Done</button>${il?'<button class="btn sm" id="mkall">Tick all</button>':""}</div>`;
+  $("#mkdone").onclick=()=>d.close();
+  if($("#mkall"))$("#mkall").onclick=()=>{change(o,"All items made",()=>o.lines.forEach(l=>units(l).forEach(k=>o.checks[k]=true)));makeDialog(o)};
+  if(!d.open)d.showModal();
 }
 function orderList(){
   const q=search.trim().toLowerCase();
@@ -633,6 +668,7 @@ const acts={
   back(){const o=current();change(o,"Moved back to "+STATES[o.status-1],()=>{delete o.stamps[o.status];o.status--})},
   copyorder(){const o=current();copy(`Order #${pad(o.number)} for ${o.customer}\n`+o.lines.map(l=>`${l.qty} x ${l.name}${colText(l)?" - "+colText(l):""}${l.desc?" ("+l.desc+")":""} - ${l.price===""?"to be quoted":money(lineTotal(l))}`).join("\n")+`\n${shipLabel(o)}: ${money(o.shipping)}\nTotal: ${money(total(o))}`)},
   delorder(){const o=current();ask(`<b>Delete order #${pad(o.number)}?</b><div class="mute">This can’t be undone.</div>`,"Delete",()=>{db.orders=db.orders.filter(x=>x!==o);go("orders")})},
+  makelist(){makeDialog(current())},
   addprice(i){
     const o=current(), l=o.lines[+i];
     ask(`<b>Price for ${esc(l.name)}</b><div class="mute">Quantity: ${esc(l.qty)}</div><label>Price each ($)</label><input id="quote" type="number" min="0" step="0.01" inputmode="decimal">`,"Save price",()=>{
@@ -664,10 +700,11 @@ const acts={
     if(o){
       if(o.status>0&&unpriced(d))return toast("An accepted order needs a price on every item.");
       const next=clone(d), sig=l=>JSON.stringify([l.name,l.desc,String(l.qty),l.colours]);
-      next.lines.forEach(l=>{const old=o.lines.find(x=>x.id===l.id);if(!old||sig(old)!==sig(l))delete next.checks[l.id]});
+      const before=Object.keys(next.checks).length;
+      next.lines.forEach(l=>{const old=o.lines.find(x=>x.id===l.id);if(!old||sig(old)!==sig(l))Object.keys(next.checks).forEach(k=>{if(k===l.id||k.startsWith(l.id+"#"))delete next.checks[k]})});
       if(next.address!==o.address)delete next.checks.env;
       Object.keys(next.checks).forEach(k=>{if(!checkKeys(next).includes(k))delete next.checks[k]});
-      const reopen=next.status===3&&left(next)>0;
+      const reopen=next.status===3&&Object.keys(next.checks).length<before&&left(next)>0;
       if(reopen){next.status=2;delete next.stamps[3]}
       Object.assign(o,next,{hist:o.hist,pos:o.pos});track(o,reopen?"Edited, moved back to In production":"Edited");
       if(reopen){go("order/"+o.id);return toast("Saved. Back in production: check off the changed items.")}
@@ -798,6 +835,14 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
   const t=e.target;
+  if(t.dataset.unit!==undefined){
+    const o=current(),l=o.lines.find(x=>x.id===t.dataset.line),k=t.dataset.unit,n=units(l).indexOf(k)+1;
+    change(o,(t.checked?"Made: ":"Not made: ")+l.name+(units(l).length>1?" "+n+" of "+units(l).length:""),()=>{
+      if(o.checks[l.id]){units(l).forEach(u=>o.checks[u]=true);delete o.checks[l.id]}   // older whole-line tick
+      t.checked?o.checks[k]=true:delete o.checks[k];
+    });
+    makeDialog(o);return;
+  }
   if(t.dataset.check!==undefined){
     const o=current(),k=t.dataset.check,l=o.lines.find(x=>x.id===k),name=l?l.name:PACK.find(p=>p[0]===k)[1];
     change(o,(t.checked?"Checked: ":"Unchecked: ")+name,()=>{t.checked?o.checks[k]=true:delete o.checks[k]});
