@@ -1,0 +1,24 @@
+[
+ {
+  "id": "mwz4gkotn4yi5",
+  "type": "Idea",
+  "text": "Add a interested customer section so I can keep track of people who have expressed interest.",
+  "screen": "#/dash",
+  "at": 1795792452798,
+  "device": "Android",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 9
+ },
+ {
+  "id": "mwz4ht7e1ekz6",
+  "type": "Idea",
+  "text": "Add a costs section where costs related to this business can be added and tracked.",
+  "screen": "#/dash",
+  "at": 1795792510490,
+  "device": "Android",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 10
+ }
+]
