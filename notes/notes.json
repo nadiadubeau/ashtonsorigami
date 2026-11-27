@@ -108,5 +108,16 @@
   "done": false,
   "by": "Nadia",
   "_rev": 137
+ },
+ {
+  "id": "mwz5w8npx9rbx",
+  "type": "Change",
+  "text": "Make an ideas section in the app to list future product ideas",
+  "screen": "#/dash",
+  "at": 1795794863317,
+  "device": "Other",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 138
  }
 ]
