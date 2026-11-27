@@ -10,6 +10,10 @@ _Screen #/order · 2026-11-27 15:47 · Other · Nadia_
 Put a heading above the shipping address saying shipping address
 _Screen #/order · 2026-11-27 15:48 · Other · Nadia_
 
+## [Open] Change (mwz5psxiuqzh4)
+Make the rainbow of colour under the menu bar line up with the menu items
+_Screen #/dash · 2026-11-27 15:49 · Other · Nadia_
+
 ## [Done] Idea (mwz4gkotn4yi5)
 Add a interested customer section so I can keep track of people who have expressed interest.
 _Screen #/dash · 2026-11-27 15:14 · Android · Nadia_
