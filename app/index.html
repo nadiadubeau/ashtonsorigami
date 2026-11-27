@@ -29,7 +29,7 @@ h1{font-size:21px;margin:4px 0 12px}h2{font-size:16px;margin:18px 0 8px}
 .grid{display:grid;gap:10px;grid-template-columns:1fr}
 .tablet .grid,.web .grid{grid-template-columns:1fr 1fr}.web .grid.three{grid-template-columns:1fr 1fr 1fr}
 .grid .card{margin:0}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.web .stats,.tablet .stats{grid-template-columns:repeat(4,1fr)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.web .stats,.tablet .stats{grid-template-columns:repeat(3,1fr)}
 .stat b{display:block;font-size:22px}.stat span{font-size:13px;color:var(--mute)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}
 .mute{color:var(--mute);font-size:14px}.warn{color:var(--acc);font-weight:600}
@@ -86,7 +86,7 @@ button.btn.pri{background:linear-gradient(115deg,#c8362f 55%,#b42c2a 55%);border
 header button.btn{background:#f4b942;border-color:#f4b942;color:#262a45}
 .stat{border:0!important;color:#fff}.stat::after{background:linear-gradient(45deg,#ffffff66 50%,var(--bg) 50%)}
 .stat span{color:#fff}
-.stats .stat:nth-child(1){background:#c8362f}.stats .stat:nth-child(2){background:#9c5a00}.stats .stat:nth-child(3){background:#1c7368}.stats .stat:nth-child(4){background:#3d5a99}
+.stats .stat:nth-child(1){background:#c8362f}.stats .stat:nth-child(2){background:#9c5a00}.stats .stat:nth-child(3){background:#1c7368}.stats .stat:nth-child(4){background:#3d5a99}.stats .stat:nth-child(5){background:#8a3e7a}.stats .stat:nth-child(6){background:#22366b}
 .hero{display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#fde7ea 62%,#fbd5dd 62%);border-radius:6px 22px 22px 22px;padding:12px 16px;margin-bottom:12px}
 .hero svg{width:92px;height:74px;flex:none}.hero b{font-size:22px;color:var(--indigo);display:block}
 .chips button.on{background:var(--indigo);border-color:var(--indigo)}
@@ -106,7 +106,7 @@ h1{font-size:30px;font-weight:900;letter-spacing:.3px;margin:6px 0 14px;display:
 h2{font-size:18px;font-weight:800}
 header nav button{font-weight:700;font-size:15px;letter-spacing:.2px}
 header nav button.on{background:#ffffff22;border-radius:10px 10px 0 0}
-body.phone header nav button{font-weight:700;font-size:13px}
+body.phone header nav button{font-weight:700;font-size:12px;padding-left:1px;padding-right:1px}
 body.phone header nav button.on{background:#fde7ea;border-radius:0 0 10px 10px}
 /* ---------- paper colours ---------- */
 .sw{display:inline-block;width:16px;height:16px;border-radius:3px;border:1px solid #0003;vertical-align:-3px;flex:none}
@@ -181,9 +181,13 @@ const defaultColours=()=>[["Red","#d62f2a"],["Orange","#f28c28"],["Yellow","#f6d
 const sw=n=>{if(n===MULTI)return '<i class="sw multi"></i>';const c=db.colours.find(x=>x.name===n);return c&&c.img?`<i class="sw img" style="background:url('${c.img}')"></i>`:`<i class="sw" style="background:${c?esc(c.hex):"repeating-linear-gradient(45deg,#ddd 0 3px,#fff 0 6px)"}"></i>`};
 const colours=l=>(l.colours||[]).length?`<div class="cols">${l.colours.map(n=>`<span>${sw(n)}${esc(n)}</span>`).join("")}</div>`:"";
 const colText=l=>(l.colours||[]).join(" + ");
+const LEAD_STATES=["New","Contacted","Ordered","Not interested"];
+const COST_CATS=["Paper","Supplies","Postage","Packaging","Fees","Other"];
+const leadBadge=s=>`<span class="badge s${{New:0,Contacted:1,Ordered:3,"Not interested":4}[s]??0}">${esc(s)}</span>`;
+const sumCosts=a=>a.reduce((t,c)=>t+cents(c.amount),0)/100;
 const shipLabel=o=>o.shipName?"Shipping ("+o.shipName+")":"Shipping";
 /* ---------- server sync ---------- */
-const COLLS=["orders","products","notes"], DOCS=["settings","colours"];
+const COLLS=["orders","products","notes","leads","costs"], DOCS=["settings","colours"];
 let db=null, me=null, version="", status={}, admin=null, adminLoading=false;
 let rev=0, base={}, sent={}, syncing=false, again=false, online=true, timer=0;
 const K=(c,id)=>c+":"+id;
@@ -219,7 +223,7 @@ function pending(){
   DOCS.forEach(k=>{if(k==="settings"&&me.role!=="admin")return;const j=JSON.stringify(db[k]);if(sent[k]!==j)items.push({coll:k,base:base[k],data:db[k],json:j})});
   return items;
 }
-const editing=()=>["new","edit","product"].includes(route.split("/")[0])||$("#dlg").open||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||"");
+const editing=()=>["new","edit","product","lead","cost"].includes(route.split("/")[0])||$("#dlg").open||/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||"");
 const what=c=>({orders:"this order",products:"this product",notes:"this note",colours:"the paper colours",settings:"Settings"})[c];
 function save(){clearTimeout(timer);timer=setTimeout(flush,400);pill()}
 async function flush(){
@@ -309,6 +313,7 @@ function historyBox(r){
   <details class="card" style="margin-top:10px"><summary>Change history (${r.hist.length})</summary><table>${r.hist.map((h,i)=>`<tr><td>${esc(h.label)}${i===r.pos?" <b>← current</b>":""}${h.by?`<div class="mute">${esc(h.by)}</div>`:""}</td><td class="r mute">${when(h.at)}</td></tr>`).reverse().join("")}</table></details>`;
 }
 
+let leadFilter="active";
 let route=location.hash.slice(2)||"dash", filter="open", search="", draft=null, draftKey="";
 
 /* ---------- routing ---------- */
@@ -341,13 +346,14 @@ const views={
     <div class="hero">${CRANE}<div><b>${open.length} open order${open.length===1?"":"s"}</b><span class="mute">Happy folding!</span></div></div>
     <button class="btn pri wide" data-go="new">＋ New order</button>
     <h2>Money</h2><div class="stats">
-      ${[[money(sum(open)),"Value of open orders"],[money(sum(os.filter(o=>!o.paid))),"Waiting to be paid"],[money(sum(os.filter(o=>o.paid))),"Paid, all time"],[money(sum(shippedM)),"Shipped this month"]].map(([v,t])=>`<div class="card stat" style="margin:0"><b>${v}</b><span>${t}</span></div>`).join("")}
+      ${[[money(sum(open)),"Value of open orders"],[money(sum(os.filter(o=>!o.paid))),"Waiting to be paid"],[money(sum(os.filter(o=>o.paid))),"Paid, all time"],[money(sum(shippedM)),"Shipped this month"],[money(sumCosts(db.costs.filter(c=>(c.date||"").startsWith(month)))),"Costs this month"],[money(sum(os.filter(o=>o.paid))-sumCosts(db.costs)),"Profit, all time (paid − costs)"]].map(([v,t])=>`<div class="card stat" style="margin:0"><b>${v}</b><span>${t}</span></div>`).join("")}
     </div>
     <h2>Workflow</h2><div class="card"><table>${STATES.map((s,i)=>`<tr><td><button class="btn sm wide" style="text-align:left" data-act="filter" data-v="${i}">${badge(i)}</button></td><td class="r"><b style="line-height:36px">${os.filter(o=>o.status===i).length}</b></td></tr>`).join("")}</table></div>
-    <h2>Next due</h2><div class="grid">${open.sort(byDue).slice(0,4).map(orderCard).join("")||'<div class="card mute">No open orders.</div>'}</div>`;
+    <h2>Next due</h2><div class="grid">${open.sort(byDue).slice(0,4).map(orderCard).join("")||'<div class="card mute">No open orders.</div>'}</div>
+    ${(()=>{const f=db.leads.filter(l=>l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status)).sort((a,b)=>a.follow.localeCompare(b.follow));return f.length?`<h2>Follow up today</h2><div class="grid">${f.map(leadCard).join("")}</div>`:""})()}`;
   },
   orders(){
-    return `<h1>Orders</h1>
+    return `<h1>Orders</h1><div class="subtabs"><button class="on" data-go="orders">Orders</button><button class="" data-go="leads">Interested</button></div>
     <div class="chips">${[["open","Open"],...STATES.map((s,i)=>[String(i),s]),["all","All"]].map(([v,t])=>`<button class="${filter===v?"on":""}" data-act="filter" data-v="${v}">${t}</button>`).join("")}</div>
     <input id="search" type="search" placeholder="Search name, number or item" value="${esc(search)}" style="margin-bottom:10px">
     <div class="grid" id="list">${orderList()}</div>`;
@@ -384,6 +390,50 @@ const views={
     <label class="row" style="color:var(--ink);font-size:16px"><input type="checkbox" data-f="active" ${draft.active?"checked":""}> Offer this on new orders</label></div>
     <div class="row" style="margin-bottom:10px"><button class="btn pri" data-act="saveproduct">Save product</button><button class="btn" data-go="products">Cancel</button>${p?'<button class="btn" data-act="delproduct">Delete</button>':""}</div>
     ${p?historyBox(p):""}`;
+  },
+  leads(){
+    const all=db.leads.slice().sort((a,b)=>(b.created||0)-(a.created||0)), active=all.filter(l=>["New","Contacted"].includes(l.status));
+    const list=leadFilter==="all"?all:active;
+    return `<h1>Interested</h1><div class="subtabs"><button class="" data-go="orders">Orders</button><button class="on" data-go="leads">Interested</button></div>
+    <button class="btn pri wide" data-go="lead/new" style="margin-bottom:10px">＋ Add interested customer</button>
+    <div class="chips"><button class="${leadFilter==="all"?"":"on"}" data-act="leadfilter" data-v="active">Still interested (${active.length})</button><button class="${leadFilter==="all"?"on":""}" data-act="leadfilter" data-v="all">All (${all.length})</button></div>
+    <div class="grid">${list.map(leadCard).join("")||'<div class="card mute">No one here yet. Add people who ask about your origami so you can follow up.</div>'}</div>`;
+  },
+  lead(id){
+    const key="l:"+id, l=db.leads.find(x=>x.id===id);
+    if(draftKey!==key){draftKey=key;draft=l?snap(l):{id:uid(),name:"",contact:"",interest:"",status:"New",follow:"",notes:"",created:Date.now()}}
+    const linked=l&&l.orderId&&db.orders.find(o=>o.id===l.orderId);
+    return `<h1>${l?"Interested customer":"Add interested customer"}</h1><div class="card">
+    <label>Name *</label><input data-f="name" value="${esc(draft.name)}">
+    <label>How to reach them</label><input data-f="contact" placeholder="Marketplace name, phone or email" value="${esc(draft.contact)}">
+    <label>What are they interested in?</label><textarea data-f="interest" placeholder="e.g. crane mobile in blue for a baby room">${esc(draft.interest)}</textarea>
+    <div class="two"><div><label>Status</label><select data-f="status">${LEAD_STATES.map(s=>`<option ${draft.status===s?"selected":""}>${s}</option>`).join("")}</select></div><div><label>Follow up on</label><input type="date" data-f="follow" value="${esc(draft.follow)}"></div></div>
+    <label>Notes</label><textarea data-f="notes">${esc(draft.notes)}</textarea>
+    ${linked?`<div style="margin-top:10px">Ordered: <button class="btn sm" data-go="order/${linked.id}">Order #${pad(linked.number)}</button></div>`:""}</div>
+    <div class="row" style="margin-bottom:10px"><button class="btn pri" data-act="savelead">Save</button>${l&&!linked?'<button class="btn" data-act="leadorder">Turn into an order →</button>':""}<button class="btn" data-go="leads">Cancel</button>${l?'<button class="btn" data-act="dellead">Delete</button>':""}</div>
+    ${l?historyBox(l):""}`;
+  },
+  costs(){
+    const month=today().slice(0,7), year=today().slice(0,4), list=db.costs.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.created||0)-(a.created||0));
+    const byCat=COST_CATS.map(c=>[c,sumCosts(db.costs.filter(x=>x.cat===c&&(x.date||"").startsWith(year)))]).filter(x=>x[1]);
+    const months=[...new Set(list.map(c=>(c.date||"").slice(0,7)))];
+    const mname=m=>m?new Date(m+"-15T12:00").toLocaleDateString("en-CA",{month:"long",year:"numeric"}):"No date";
+    return `<h1>Costs</h1><button class="btn pri wide" data-go="cost/new" style="margin-bottom:10px">＋ Add a cost</button>
+    <div class="stats">${[[money(sumCosts(db.costs.filter(c=>(c.date||"").startsWith(month)))),"This month"],[money(sumCosts(db.costs.filter(c=>(c.date||"").startsWith(year)))),"This year"]].map(([v,t])=>`<div class="card stat" style="margin:0"><b>${v}</b><span>${t}</span></div>`).join("")}</div>
+    ${byCat.length?`<h2>This year by category</h2><div class="card"><table>${byCat.map(([c,v])=>`<tr><td>${esc(c)}</td><td class="r">${money(v)}</td></tr>`).join("")}</table></div>`:""}
+    ${months.map(m=>{const items=list.filter(c=>(c.date||"").slice(0,7)===m);return `<h2>${mname(m)} · ${money(sumCosts(items))}</h2><div class="card">${items.map(c=>`<button class="tap" data-go="cost/${c.id}" style="background:none;border:0;border-bottom:1px dashed var(--line);padding:9px 0"><div class="row between"><span><b>${esc(c.desc)}</b>${c.photo?" 🧾":""}<div class="mute">${esc(c.cat)} · ${day(c.date)}</div></span><b>${money(c.amount)}</b></div></button>`).join("")}</div>`}).join("")||'<div class="card mute">No costs yet. Add paper, supplies, postage and so on to see where the money goes.</div>'}`;
+  },
+  cost(id){
+    const key="c:"+id, c=db.costs.find(x=>x.id===id);
+    if(draftKey!==key){draftKey=key;draft=c?snap(c):{id:uid(),date:today(),desc:"",cat:"Paper",amount:"",notes:"",photo:"",created:Date.now()}}
+    return `<h1>${c?"Edit cost":"Add a cost"}</h1><div class="card">
+    <label>What was it? *</label><input data-f="desc" placeholder="e.g. 200 sheets of washi paper" value="${esc(draft.desc)}">
+    <div class="two"><div><label>Amount ($) *</label><input type="number" min="0" step="0.01" inputmode="decimal" data-f="amount" value="${esc(draft.amount)}"></div><div><label>Date</label><input type="date" data-f="date" value="${esc(draft.date)}"></div></div>
+    <label>Category</label><select data-f="cat">${COST_CATS.map(x=>`<option ${draft.cat===x?"selected":""}>${x}</option>`).join("")}</select>
+    <label>Notes</label><textarea data-f="notes">${esc(draft.notes)}</textarea>
+    <label>Receipt photo (optional)</label>${draft.photo?`<img src="${esc(draft.photo)}" alt="" style="max-width:100%;max-height:260px;border-radius:10px;display:block;margin-bottom:6px"><button class="btn sm" data-act="rmphoto">Remove photo</button>`:""}<input type="file" id="photo" accept="image/*"></div>
+    <div class="row" style="margin-bottom:10px"><button class="btn pri" data-act="savecost">Save</button><button class="btn" data-go="costs">Cancel</button>${c?'<button class="btn" data-act="delcost">Delete</button>':""}</div>
+    ${c?historyBox(c):""}`;
   },
   colours(){
     return `<h1>Paper colours</h1><div class="subtabs"><button class="" data-go="products">Products</button><button class="on" data-go="colours">Paper colours</button></div>
@@ -451,6 +501,11 @@ function checklist(o){
   <h2>Items to make</h2>${o.lines.map(l=>box(l.id,`<b>${esc(l.qty)}× ${esc(l.name)}</b>${colours(l)}${l.desc?`<div class="mute">${esc(l.desc)}</div>`:""}`)).join("")}
   <h2>Envelope</h2>${PACK.map(([k,t])=>{const extra=k==="env"?o.address||"No address on this order yet":k==="ret"?ret||"Add your return address in Settings":"";return box(k,esc(t)+(extra?`<div class="mute" style="white-space:pre-wrap">${esc(extra)}</div>`:""))}).join("")}</div>`;
 }
+function leadCard(l){
+  const due=l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status);
+  return `<button class="card tap" data-go="lead/${l.id}"><div class="row between"><b>${esc(l.name)}</b>${leadBadge(l.status)}</div>
+  ${l.interest?`<div class="mute">${esc(l.interest)}</div>`:""}<div class="${due?"warn":"mute"}">${l.follow?(due?"Follow up: ":"Follow up ")+day(l.follow):"Added "+day(today(new Date(l.created||Date.now())))}${l.contact?" · "+esc(l.contact):""}</div></button>`;
+}
 function orderList(){
   const q=search.trim().toLowerCase();
   return db.orders.filter(o=>filter==="all"||(filter==="open"?o.status<4:o.status===+filter))
@@ -494,10 +549,10 @@ function banners(){
 function render(){
   applyLayout();
   const [v,id]=route.split("/");
-  if(!["new","edit","product"].includes(v)){draft=null;draftKey=""}
+  if(!["new","edit","product","lead","cost"].includes(v)){draft=null;draftKey=""}
   $("#brandname").textContent=db.settings.name;document.title=db.settings.name;
-  const tab={order:"orders",edit:"orders",product:"products",colours:"products",notes:"settings"}[v]||v;
-  $("#nav").innerHTML=[["dash","Dashboard"],["orders","Orders"],["new","New order"],["products","Products"],["settings",me.role==="admin"?"Settings":"Account"]].map(([r,t])=>`<button data-go="${r}" class="${tab===r?"on":""}">${t}</button>`).join("");
+  const tab={order:"orders",edit:"orders",leads:"orders",lead:"orders",product:"products",colours:"products",cost:"costs",notes:"settings"}[v]||v;
+  $("#nav").innerHTML=[["dash","Dashboard"],["orders","Orders"],["new","＋ New"],["products","Products"],["costs","Costs"],["settings",me.role==="admin"?"Settings":"Account"]].map(([r,t])=>`<button data-go="${r}" class="${tab===r?"on":""}">${t}</button>`).join("");
   $("#app").innerHTML=banners()+(views[v]||views.dash)(id);
   save();
 }
@@ -521,7 +576,7 @@ function download(name,text){
 const notesText=list=>list.map(n=>`[${n.type}] ${n.text}\n  Screen: ${n.screen} · ${when(n.at)} · ${n.device}`).join("\n\n");
 
 /* ---------- actions ---------- */
-const current=()=>{const [v,id]=route.split("/");return (v==="product"?db.products:db.orders).find(x=>x.id===id)};
+const current=()=>{const [v,id]=route.split("/");return ({product:db.products,lead:db.leads,cost:db.costs}[v]||db.orders).find(x=>x.id===id)};
 function change(o,label,fn){fn();track(o,label);save();render()}
 const acts={
   note(){
@@ -586,10 +641,34 @@ const acts={
       if(reopen){go("order/"+o.id);return toast("Saved. Back in production: check off the changed items.")}
     }else{
       o={...clone(d),id:uid(),number:0,status:0,created:Date.now(),stamps:{0:Date.now()}};track(o,"Order created");db.orders.push(o);
+      const lead=d.leadId&&db.leads.find(x=>x.id===d.leadId);if(lead){lead.status="Ordered";lead.orderId=o.id;track(lead,"Turned into an order")}
     }
     go("order/"+o.id);toast("Saved");
   },
   rmphoto(){draft.photo="";render()},
+  leadfilter(v){leadFilter=v;render()},
+  savelead(){
+    if(!draft.name.trim())return toast("Add their name.");
+    let l=db.leads.find(x=>x.id===draft.id);
+    if(l){Object.assign(l,clone(draft));track(l,"Edited")}else{l=clone(draft);track(l,"Added");db.leads.push(l)}
+    go("leads");toast("Saved");
+  },
+  dellead(){const l=current();ask(`<b>Delete ${esc(l.name)}?</b>`,"Delete",()=>{db.leads=db.leads.filter(x=>x!==l);go("leads")})},
+  leadorder(){
+    const l=current();
+    go("new");
+    Object.assign(draft,{customer:l.name,contact:l.contact,notes:l.interest,leadId:l.id});
+    render();toast("Add the items, then Create order.");
+  },
+  savecost(){
+    if(!draft.desc.trim())return toast("Say what the cost was for.");
+    if(draft.amount===""||!(+draft.amount>=0))return toast("Add an amount of 0 or more.");
+    draft.amount=Math.round(+draft.amount*100)/100;
+    let c=db.costs.find(x=>x.id===draft.id);
+    if(c){Object.assign(c,clone(draft));track(c,"Edited")}else{c=clone(draft);track(c,"Added");db.costs.push(c)}
+    go("costs");toast("Saved");
+  },
+  delcost(){const c=current();ask(`<b>Delete “${esc(c.desc)}”?</b>`,"Delete",()=>{db.costs=db.costs.filter(x=>x!==c);go("costs")})},
   saveproduct(){
     if(!draft.name.trim())return toast("Add a product name.");
     if(draft.price===""||+draft.price<0)return toast("Add a price of 0 or more.");
@@ -666,7 +745,7 @@ async function folderPicker(path){
 
 document.addEventListener("click",e=>{
   const g=e.target.closest("[data-go]");
-  if(g){const r=g.dataset.go;if(r==="new"||r.startsWith("edit/")||r.startsWith("product/")){draft=null;draftKey=""}return go(r)}
+  if(g){const r=g.dataset.go;if(r==="new"||/^(edit|product|lead|cost)\//.test(r)){draft=null;draftKey=""}return go(r)}
   const a=e.target.closest("[data-act]");
   if(a)acts[a.dataset.act](a.dataset.v,a);
 });

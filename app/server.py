@@ -20,7 +20,7 @@ CURRENT = os.path.join(ROOT, "current")
 PORT = int(os.environ.get("AO_PORT", "8091"))
 HOST = os.environ.get("AO_HOST", "127.0.0.1")
 VERSION = open(os.path.join(APP_DIR, "VERSION")).read().strip()
-COLLS = ("orders", "products", "notes")
+COLLS = ("orders", "products", "notes", "leads", "costs")
 DOCS = ("settings", "colours")
 KEEP_VERSIONS = 10
 SESSION_DAYS = 30
@@ -68,6 +68,8 @@ def default_store():
 
 
 STORE = jload("store.json", None) or default_store()
+for _c in COLLS:
+    STORE["records"].setdefault(_c, {})
 USERS = jload("users.json", {})          # username -> {name, role, salt, hash}
 SESSIONS = jload("sessions.json", {})    # token -> {user, exp}
 CONFIG = jload("config.json", {})        # secrets: github, dropbox
@@ -443,8 +445,16 @@ def dropbox_sync():
         prods = list(snap["records"]["products"].values())
         dbx_upload(folder + "/Products.csv", csv_bytes([["Product", "Description", "Price", "Offered"]] +
                    [[p.get("name"), p.get("desc"), money(p.get("price")), "Yes" if p.get("active") else "No"] for p in prods]))
+        leads = sorted(snap["records"]["leads"].values(), key=lambda l: l.get("created") or 0)
+        dbx_upload(folder + "/Interested customers.csv", csv_bytes([["Name", "Contact", "Interested in", "Status", "Follow up", "Notes", "Added"]] +
+                   [[l.get("name"), l.get("contact"), l.get("interest"), l.get("status"), l.get("follow"), l.get("notes"),
+                     time.strftime("%Y-%m-%d", time.localtime((l.get("created") or 0) / 1000))] for l in leads]))
+        costs = sorted(snap["records"]["costs"].values(), key=lambda c: c.get("date") or "")
+        dbx_upload(folder + "/Costs.csv", csv_bytes([["Date", "What", "Category", "Amount", "Notes"]] +
+                   [[c.get("date"), c.get("desc"), c.get("cat"), money(c.get("amount")), c.get("notes")] for c in costs]))
         sent = STATE.setdefault("photoHashes", {})
         pics = [("Products/" + safe_name(p.get("name")) + ".jpg", p.get("photo")) for p in prods]
+        pics += [("Receipts/" + safe_name((c.get("date") or "") + " " + (c.get("desc") or "")) + ".jpg", c.get("photo")) for c in costs]
         pics += [("Paper colours/" + safe_name(c.get("name")) + ".jpg", c.get("img")) for c in snap["docs"]["colours"]["data"]]
         for path, url in pics:
             b = data_url_bytes(url)
@@ -479,6 +489,8 @@ def export_data(snap=None):
             "orders": [clean(r) for r in s["records"]["orders"].values()],
             "products": [clean(r) for r in s["records"]["products"].values()],
             "notes": [clean(r) for r in s["records"]["notes"].values()],
+            "leads": [clean(r) for r in s["records"]["leads"].values()],
+            "costs": [clean(r) for r in s["records"]["costs"].values()],
             "settings": s["docs"]["settings"]["data"], "colours": s["docs"]["colours"]["data"]}
 
 
