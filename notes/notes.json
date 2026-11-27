@@ -86,5 +86,16 @@
   "done": false,
   "by": "Nadia",
   "_rev": 113
+ },
+ {
+  "id": "mwz5psxiuqzh4",
+  "type": "Change",
+  "text": "Make the rainbow of colour under the menu bar line up with the menu items",
+  "screen": "#/dash",
+  "at": 1795794562998,
+  "device": "Other",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 114
  }
 ]
