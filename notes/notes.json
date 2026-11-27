@@ -42,5 +42,16 @@
   "done": false,
   "by": "Nadia",
   "_rev": 19
+ },
+ {
+  "id": "mwz5frle1pxce",
+  "type": "Idea",
+  "text": "Add piece of cardboard to production checklist.",
+  "screen": "#/order",
+  "at": 1795794094706,
+  "device": "Other",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 65
  }
 ]
