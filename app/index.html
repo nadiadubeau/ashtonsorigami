@@ -179,6 +179,15 @@ button.tap.makebtn,.makebtn{display:flex;align-items:center;gap:12px;background:
 .mkline .check{padding-left:8px}
 .mkline .cols{display:flex;margin:4px 0 2px}
 dialog{width:min(560px,94vw)}
+
+/* ---------- menu stripe lines up with the menu items ---------- */
+header{border-bottom:0!important;border-image:none!important}
+header nav button:nth-child(1){--sc:#c8362f}header nav button:nth-child(2){--sc:#f78d5c}header nav button:nth-child(3){--sc:#f4b942}
+header nav button:nth-child(4){--sc:#2a9d8f}header nav button:nth-child(5){--sc:#3d5a99}header nav button:nth-child(6){--sc:#f6a5b8}
+header nav button{border-bottom:6px solid var(--sc)!important}
+body.phone header{border-bottom:4px solid #f4b942!important}
+body.phone header nav button{border-bottom:0!important;border-top:6px solid var(--sc)!important}
+.fieldhead{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--indigo);margin:12px 0 2px}
 </style>
 </head>
 <body class="phone">
@@ -215,7 +224,7 @@ const total=o=>(cents(subtotal(o))+cents(o.shipping))/100;
 const unpriced=o=>o.lines.some(l=>l.price===""||l.price==null);
 
 /* ---------- packing checklist and shipping ---------- */
-const PACK=[["env","Address written on envelope"],["ret","Return address written on envelope"],["card","Piece of cardboard put in envelope"],["stamp","Postage stamp attached"],["note","Thank you note put in envelope"]];
+const PACK=[["photo","Photos taken and sent to Nadia"],["env","Address written on envelope"],["ret","Return address written on envelope"],["card","Piece of cardboard put in envelope"],["stamp","Postage stamp attached"],["note","Thank you note put in envelope"]];
 /* each item made gets its own tick: checks["<line id>#<n>"]; an older whole-line tick (checks["<line id>"]) counts as all made */
 const units=l=>Array.from({length:Math.max(1,+l.qty||1)},(_,i)=>l.id+"#"+(i+1));
 const unitDone=(o,l,k)=>!!(o.checks[l.id]||o.checks[k]);
@@ -415,7 +424,8 @@ const views={
     <div class="card"><div class="steps">${STATES.map((s,i)=>`<div class="step ${i<=o.status?"done":""} ${i===o.status?"now":""}"><i></i>${s}</div>`).join("")}</div>
     ${o.status<4?`<button class="btn pri wide" data-act="advance" ${o.status===2&&left(o)?"disabled":""}>${NEXT[o.status]} →</button>${o.status===2&&left(o)?`<div class="warn" style="margin-top:8px;text-align:center">Check off ${left(o)} more item${left(o)===1?"":"s"} first</div>`:""}`:`<div class="mute">Shipped ${o.stamps[4]?when(o.stamps[4]):""}${o.tracking?" · Tracking: "+esc(o.tracking):""}</div>`}
     ${o.status>0?`<button class="btn sm" style="margin-top:8px" data-act="back">← Move back to “${STATES[o.status-1]}”</button>`:""}</div>
-    <div class="card"><b>${esc(o.customer)}</b><div class="mute">${esc(o.contact)}</div><div style="white-space:pre-wrap">${esc(o.address)}</div><div class="mute">${o.due?"Due "+day(o.due):"No due date"}</div></div>
+    <div class="card"><b>${esc(o.customer)}</b><div class="mute">${esc(o.contact)}</div><div class="mute">${o.due?"Due "+day(o.due):"No due date"}</div>
+    <div class="fieldhead">Shipping address</div><div style="white-space:pre-wrap">${o.address?esc(o.address):'<span class="mute">No address yet</span>'}</div></div>
     ${o.notes?`<div class="card" style="white-space:pre-wrap">${esc(o.notes)}</div>`:""}
     </div><div>
     ${o.status===2?checklist(o):""}
@@ -551,7 +561,8 @@ function checklist(o){
   const box=(k,html)=>`<label class="check"><input type="checkbox" data-check="${esc(k)}" ${o.checks[k]?"checked":""}><span class="txt">${html}</span></label>`;
   return `<div class="card"><b>Production checklist</b><div class="mute">${done} of ${all} done</div><div class="progress"><i style="width:${done/all*100}%"></i></div>
   <h2>Items to make</h2><button class="tap makebtn ${il?"":"done"}" data-act="makelist"><span class="mk">${il?"✂":"✓"}</span><span style="flex:1"><b>${il?`${ia-il} of ${ia} made`:"Completed"}</b><div class="mute">${il?"Tap to tick off each item as you make it":"All "+ia+" item"+(ia===1?"":"s")+" made · tap to see"}</div></span><span class="mute">›</span></button>
-  <h2>Envelope</h2>${PACK.map(([k,t])=>{const extra=k==="env"?o.address||"No address on this order yet":k==="ret"?ret||"Add your return address in Settings":"";return box(k,esc(t)+(extra?`<div class="mute" style="white-space:pre-wrap">${esc(extra)}</div>`:""))}).join("")}</div>`;
+  <h2>Photos</h2>${box("photo","Photos taken and sent to Nadia")}
+  <h2>Envelope</h2>${PACK.filter(p=>p[0]!=="photo").map(([k,t])=>{const extra=k==="env"?o.address||"No address on this order yet":k==="ret"?ret||"Add your return address in Settings":"";return box(k,esc(t)+(extra?`<div class="mute" style="white-space:pre-wrap">${esc(extra)}</div>`:""))}).join("")}</div>`;
 }
 function leadCard(l){
   const due=l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status);
