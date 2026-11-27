@@ -6,9 +6,9 @@
   "screen": "#/dash",
   "at": 1795792452798,
   "device": "Android",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 9
+  "_rev": 12
  },
  {
   "id": "mwz4ht7e1ekz6",
@@ -17,9 +17,9 @@
   "screen": "#/dash",
   "at": 1795792510490,
   "device": "Android",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 10
+  "_rev": 13
  },
  {
   "id": "mwz4yc53wn3i3",
@@ -28,8 +28,19 @@
   "screen": "#/dash",
   "at": 1795793281527,
   "device": "Windows",
+  "done": true,
+  "by": "Nadia",
+  "_rev": 18
+ },
+ {
+  "id": "mwz59bhy9w14b",
+  "type": "Change",
+  "text": "Make these tabs lists rather side by side squares",
+  "screen": "#/orders",
+  "at": 1795793793911,
+  "device": "Other",
   "done": false,
   "by": "Nadia",
-  "_rev": 11
+  "_rev": 19
  }
 ]
