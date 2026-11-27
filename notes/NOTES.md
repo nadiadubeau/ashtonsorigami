@@ -6,6 +6,10 @@ Open notes are listed first. When a version completes notes, list their ids in a
 Add to checklist. Take photos and send to nadia
 _Screen #/order · 2026-11-27 15:47 · Other · Nadia_
 
+## [Open] Change (mwz5oz76zmq7p)
+Put a heading above the shipping address saying shipping address
+_Screen #/order · 2026-11-27 15:48 · Other · Nadia_
+
 ## [Done] Idea (mwz4gkotn4yi5)
 Add a interested customer section so I can keep track of people who have expressed interest.
 _Screen #/dash · 2026-11-27 15:14 · Android · Nadia_
