@@ -20,5 +20,16 @@
   "done": false,
   "by": "Nadia",
   "_rev": 10
+ },
+ {
+  "id": "mwz4yc53wn3i3",
+  "type": "Idea",
+  "text": "aswell as a phone view add a tablet view for using this app on an ipad",
+  "screen": "#/dash",
+  "at": 1795793281527,
+  "device": "Windows",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 11
  }
 ]
