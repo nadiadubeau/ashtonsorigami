@@ -6,6 +6,10 @@ Open notes are listed first. When a version completes notes, list their ids in a
 Change shipping address to be more structured. Also add the ability to search for the address. I think Canada post offers an embedded solution
 _Screen #/new · 2026-11-27 15:53 · Other · Nadia_
 
+## [Open] Change (mwz5w8npx9rbx)
+Make an ideas section in the app to list future product ideas
+_Screen #/dash · 2026-11-27 15:54 · Other · Nadia_
+
 ## [Done] Idea (mwz4gkotn4yi5)
 Add a interested customer section so I can keep track of people who have expressed interest.
 _Screen #/dash · 2026-11-27 15:14 · Android · Nadia_
