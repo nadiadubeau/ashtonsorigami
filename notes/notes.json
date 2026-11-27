@@ -97,5 +97,16 @@
   "done": true,
   "by": "Nadia",
   "_rev": 130
+ },
+ {
+  "id": "mwz5v5gx3dat9",
+  "type": "Change",
+  "text": "Change shipping address to be more structured. Also add the ability to search for the address. I think Canada post offers an embedded solution",
+  "screen": "#/new",
+  "at": 1795794812529,
+  "device": "Other",
+  "done": false,
+  "by": "Nadia",
+  "_rev": 137
  }
 ]
