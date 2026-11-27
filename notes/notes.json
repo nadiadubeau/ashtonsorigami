@@ -39,9 +39,9 @@
   "screen": "#/orders",
   "at": 1795793793911,
   "device": "Other",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 19
+  "_rev": 94
  },
  {
   "id": "mwz5frle1pxce",
@@ -50,9 +50,9 @@
   "screen": "#/order",
   "at": 1795794094706,
   "device": "Other",
-  "done": false,
+  "done": true,
   "by": "Nadia",
-  "_rev": 65
+  "_rev": 95
  },
  {
   "id": "mwz5h2mj6l9v5",
@@ -61,8 +61,19 @@
   "screen": "#/order",
   "at": 1795794155659,
   "device": "Other",
+  "done": true,
+  "by": "Nadia",
+  "_rev": 96
+ },
+ {
+  "id": "mwz5n2fra9rdu",
+  "type": "Change",
+  "text": "Add to checklist. Take photos and send to nadia",
+  "screen": "#/order",
+  "at": 1795794435351,
+  "device": "Other",
   "done": false,
   "by": "Nadia",
-  "_rev": 66
+  "_rev": 104
  }
 ]
