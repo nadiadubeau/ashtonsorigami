@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Origami">
+<meta name="theme-color" content="#22366b">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Ashton's Origami</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20140%20140%22%3E%3Ccircle%20cx%3D%2270%22%20cy%3D%2270%22%20r%3D%2270%22%20fill%3D%22%23fff8ec%22/%3E%3Cg%20transform%3D%22translate%289%2021%29%22%3E%3Cpolygon%20points%3D%2258%2C64%2090%2C14%2084%2C66%22%20fill%3D%22%23f6a5b8%22%20stroke%3D%22%23f6a5b8%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2272%2C64%20118%2C26%2090%2C76%22%20fill%3D%22%232a9d8f%22%20stroke%3D%22%232a9d8f%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2272%2C64%20118%2C26%2082%2C60%22%20fill%3D%22%2352c2b2%22%20stroke%3D%22%2352c2b2%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2248%2C66%2020%2C24%2034%2C74%22%20fill%3D%22%233d5a99%22%20stroke%3D%22%233d5a99%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2248%2C66%2020%2C24%2040%2C60%22%20fill%3D%22%235b7cc4%22%20stroke%3D%22%235b7cc4%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2220%2C24%204%2C40%2025%2C32%22%20fill%3D%22%23f4b942%22%20stroke%3D%22%23f4b942%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2234%2C74%2060%2C58%2090%2C76%2060%2C92%22%20fill%3D%22%23c8362f%22%20stroke%3D%22%23c8362f%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2234%2C74%2060%2C70%2060%2C92%22%20fill%3D%22%23a82a28%22%20stroke%3D%22%23a82a28%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2240%2C68%2046%2C6%2062%2C70%22%20fill%3D%22%23ee5a46%22%20stroke%3D%22%23ee5a46%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3Cpolygon%20points%3D%2246%2C6%2078%2C72%2062%2C70%22%20fill%3D%22%23f78d5c%22%20stroke%3D%22%23f78d5c%22%20stroke-width%3D%22.6%22%20stroke-linejoin%3D%22round%22/%3E%3C/g%3E%3C/svg%3E">
 <style>
@@ -136,6 +141,28 @@ body.phone header nav button.on{background:#c8362f;color:#fff!important;border-r
 .colrow .sub{grid-column:2/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:-4px}
 .colpick .sw{width:22px;height:22px}
 .colrow .photobtn{min-width:48px;min-height:44px;font-size:20px;justify-content:center;padding:4px 8px}
+
+/* ---------- tablet (iPad) ---------- */
+.split>div{min-width:0}
+body.tablet .split,body.web .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+body.tablet .split .grid,body.web .split .grid{grid-template-columns:1fr}
+body.tablet{--w:1180px;font-size:17px}
+body.tablet main{padding:18px 22px 40px}
+body.tablet .bar{padding:12px 22px}
+body.tablet header nav button{font-size:17px;padding:15px 4px}
+body.tablet button.btn{min-height:50px;font-size:17px}
+body.tablet button.btn.sm{min-height:42px;font-size:15px}
+body.tablet input,body.tablet select,body.tablet textarea{font-size:17px;padding:12px}
+body.tablet h1{font-size:34px}
+body.tablet .logo{width:52px;height:52px}
+body.tablet .brand{font-size:22px}
+body.tablet .card{padding:16px}
+body.tablet .colpick button{min-height:44px;font-size:15px}
+body.tablet .check{padding:14px 4px}
+@media (orientation:landscape){
+  body.tablet .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  body.tablet .stats{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
 </style>
 </head>
 <body class="phone">
@@ -322,7 +349,8 @@ addEventListener("hashchange",()=>{const r=location.hash.slice(2)||"dash";if(r!=
 function myLayout(){try{return localStorage.getItem("ao-layout")||"auto"}catch(e){return "auto"}}
 function applyLayout(){
   let l=myLayout();
-  if(l==="auto")l=innerWidth<700?"phone":innerWidth<1050?"tablet":"web";
+  const touch=matchMedia("(pointer: coarse)").matches;
+  if(l==="auto")l=innerWidth<700?"phone":(touch||innerWidth<1050)?"tablet":"web";
   document.body.className=l;
 }
 addEventListener("resize",applyLayout);
@@ -348,9 +376,9 @@ const views={
     <h2>Money</h2><div class="stats">
       ${[[money(sum(open)),"Value of open orders"],[money(sum(os.filter(o=>!o.paid))),"Waiting to be paid"],[money(sum(os.filter(o=>o.paid))),"Paid, all time"],[money(sum(shippedM)),"Shipped this month"],[money(sumCosts(db.costs.filter(c=>(c.date||"").startsWith(month)))),"Costs this month"],[money(sum(os.filter(o=>o.paid))-sumCosts(db.costs)),"Profit, all time (paid − costs)"]].map(([v,t])=>`<div class="card stat" style="margin:0"><b>${v}</b><span>${t}</span></div>`).join("")}
     </div>
-    <h2>Workflow</h2><div class="card"><table>${STATES.map((s,i)=>`<tr><td><button class="btn sm wide" style="text-align:left" data-act="filter" data-v="${i}">${badge(i)}</button></td><td class="r"><b style="line-height:36px">${os.filter(o=>o.status===i).length}</b></td></tr>`).join("")}</table></div>
-    <h2>Next due</h2><div class="grid">${open.sort(byDue).slice(0,4).map(orderCard).join("")||'<div class="card mute">No open orders.</div>'}</div>
-    ${(()=>{const f=db.leads.filter(l=>l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status)).sort((a,b)=>a.follow.localeCompare(b.follow));return f.length?`<h2>Follow up today</h2><div class="grid">${f.map(leadCard).join("")}</div>`:""})()}`;
+    <div class="split"><div><h2>Workflow</h2><div class="card"><table>${STATES.map((s,i)=>`<tr><td><button class="btn sm wide" style="text-align:left" data-act="filter" data-v="${i}">${badge(i)}</button></td><td class="r"><b style="line-height:36px">${os.filter(o=>o.status===i).length}</b></td></tr>`).join("")}</table></div>
+    </div><div><h2>Next due</h2><div class="grid">${open.sort(byDue).slice(0,4).map(orderCard).join("")||'<div class="card mute">No open orders.</div>'}</div>
+    ${(()=>{const f=db.leads.filter(l=>l.follow&&l.follow<=today()&&["New","Contacted"].includes(l.status)).sort((a,b)=>a.follow.localeCompare(b.follow));return f.length?`<h2>Follow up today</h2><div class="grid">${f.map(leadCard).join("")}</div>`:""})()}</div></div>`;
   },
   orders(){
     return `<h1>Orders</h1><div class="subtabs"><button class="on" data-go="orders">Orders</button><button class="" data-go="leads">Interested</button></div>
@@ -361,17 +389,19 @@ const views={
   order(id){
     const o=db.orders.find(x=>x.id===id); if(!o)return `<div class="card">Order not found.</div>`;
     return `<div class="row between"><h1>Order #${pad(o.number)}</h1>${badge(o.status)}</div>
+    <div class="split"><div>
     <div class="card"><div class="steps">${STATES.map((s,i)=>`<div class="step ${i<=o.status?"done":""} ${i===o.status?"now":""}"><i></i>${s}</div>`).join("")}</div>
     ${o.status<4?`<button class="btn pri wide" data-act="advance" ${o.status===2&&left(o)?"disabled":""}>${NEXT[o.status]} →</button>${o.status===2&&left(o)?`<div class="warn" style="margin-top:8px;text-align:center">Check off ${left(o)} more item${left(o)===1?"":"s"} first</div>`:""}`:`<div class="mute">Shipped ${o.stamps[4]?when(o.stamps[4]):""}${o.tracking?" · Tracking: "+esc(o.tracking):""}</div>`}
     ${o.status>0?`<button class="btn sm" style="margin-top:8px" data-act="back">← Move back to “${STATES[o.status-1]}”</button>`:""}</div>
     <div class="card"><b>${esc(o.customer)}</b><div class="mute">${esc(o.contact)}</div><div style="white-space:pre-wrap">${esc(o.address)}</div><div class="mute">${o.due?"Due "+day(o.due):"No due date"}</div></div>
+    ${o.notes?`<div class="card" style="white-space:pre-wrap">${esc(o.notes)}</div>`:""}
+    </div><div>
     ${o.status===2?checklist(o):""}
     <div class="card"><table>${o.status===2?"":o.lines.map((l,i)=>`<tr><td>${l.qty}× ${esc(l.name)}${l.pid?"":' <span class="badge s0">Custom</span>'}${colours(l)}<div class="mute">${esc(l.desc)}</div></td><td class="r">${l.price===""?`<button class="btn sm pri" data-act="addprice" data-v="${i}">Add price</button>`:money(lineTotal(l))}</td></tr>`).join("")}
       <tr><td>${esc(shipLabel(o))}</td><td class="r">${money(o.shipping)}</td></tr><tr><td><b>Total</b>${unpriced(o)?' <span class="warn">+ to quote</span>':""}</td><td class="r"><b>${money(total(o))}</b></td></tr></table>
       <label class="row" style="color:var(--ink);font-size:16px;margin-top:12px"><input type="checkbox" id="paid" ${o.paid?"checked":""}> Paid</label></div>
-    ${o.notes?`<div class="card" style="white-space:pre-wrap">${esc(o.notes)}</div>`:""}
     <div class="row" style="margin-bottom:10px"><button class="btn" data-go="edit/${o.id}">Edit order</button><button class="btn" data-act="copyorder">Copy summary</button><button class="btn" data-act="delorder">Delete</button></div>
-    ${historyBox(o)}`;
+    ${historyBox(o)}</div></div>`;
   },
   new(){return orderForm()},
   edit(id){return orderForm(id)},
@@ -519,12 +549,14 @@ function orderForm(id){
   const picked=db.settings.rates.find(r=>r.name===draft.shipName&&+r.price===+draft.shipping);
   const prods=db.products.filter(p=>p.active);
   return `<h1>${existing?"Edit order #"+pad(existing.number):"New order"}</h1>
+  <div class="split"><div>
   <div class="card"><label>Customer name *</label><input data-f="customer" value="${esc(draft.customer)}">
   <label>How to reach them</label><input data-f="contact" placeholder="Marketplace name, phone or email" value="${esc(draft.contact)}">
   <label>Shipping address</label><textarea data-f="address">${esc(draft.address)}</textarea>
   <label>Due date</label><input type="date" data-f="due" value="${esc(draft.due)}">
   <div class="two"><div><label>Shipping</label><select id="shiprate">${db.settings.rates.map(r=>`<option value="${esc(r.id)}" ${picked===r?"selected":""}>${esc(r.name)} — ${money(r.price)}</option>`).join("")}<option value="" ${picked?"":"selected"}>Other amount</option></select></div><div><label>Shipping charge ($)</label><input type="number" min="0" step="0.01" inputmode="decimal" data-f="shipping" value="${esc(draft.shipping)}"></div></div></div>
-  <h2>Items</h2>
+  </div><div>
+  <h2 style="margin-top:0">Items</h2>
   ${draft.lines.map((l,i)=>`<div class="line ${l.pid?"":"custom"}">
     <div class="row between"><b>${l.pid?esc(l.name):"Custom item"}</b><button class="btn sm" data-act="rmline" data-v="${i}">Remove</button></div>
     ${l.pid?"":`<label>What is it? *</label><input data-l="${i}" data-k="name" value="${esc(l.name)}">`}
@@ -537,7 +569,7 @@ function orderForm(id){
   <div class="card"><label style="margin-top:0">Order notes</label><textarea data-f="notes">${esc(draft.notes)}</textarea>
   ${existing&&existing.status===4?`<label>Tracking number</label><input data-f="tracking" value="${esc(draft.tracking)}">`:""}
   <div class="row between" style="margin-top:10px"><span>Total with shipping</span><b id="ftotal" style="font-size:22px">${money(total(draft))}</b></div></div>
-  <div class="row"><button class="btn pri" data-act="saveorder">${existing?"Save changes":"Create order"}</button><button class="btn" data-go="${existing?"order/"+id:"orders"}">Cancel</button></div>`;
+  <div class="row"><button class="btn pri" data-act="saveorder">${existing?"Save changes":"Create order"}</button><button class="btn" data-go="${existing?"order/"+id:"orders"}">Cancel</button></div></div></div>`;
 }
 
 function banners(){

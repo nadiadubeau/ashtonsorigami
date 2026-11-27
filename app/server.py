@@ -609,7 +609,8 @@ class H(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(b)))
-        self.send_header("Cache-Control", "no-store")
+        if "Cache-Control" not in (extra or {}):
+            self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "same-origin")
         for k, v in (extra or {}).items():
@@ -654,6 +655,12 @@ class H(BaseHTTPRequestHandler):
         if path.path in ("/", "/index.html"):
             with open(os.path.join(APP_DIR, "index.html"), "rb") as f:
                 return self.send(200, body=f.read(), ctype="text/html; charset=utf-8")
+        if path.path in ("/apple-touch-icon.png", "/icon.png"):
+            p = os.path.join(APP_DIR, "apple-touch-icon.png")
+            if os.path.isfile(p):
+                with open(p, "rb") as fh:
+                    return self.send(200, body=fh.read(), ctype="image/png", extra={"Cache-Control": "max-age=86400"})
+            return self.send(404, {"error": "Not found"})
         if path.path == "/healthz":
             return self.send(200, {"ok": True, "version": VERSION})
         if not path.path.startswith("/api/"):
