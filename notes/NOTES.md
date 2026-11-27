@@ -6,6 +6,10 @@ Open notes are listed first. When a version completes notes, list their ids in a
 Make these tabs lists rather side by side squares
 _Screen #/orders · 2026-11-27 15:36 · Other · Nadia_
 
+## [Open] Idea (mwz5frle1pxce)
+Add piece of cardboard to production checklist.
+_Screen #/order · 2026-11-27 15:41 · Other · Nadia_
+
 ## [Done] Idea (mwz4gkotn4yi5)
 Add a interested customer section so I can keep track of people who have expressed interest.
 _Screen #/dash · 2026-11-27 15:14 · Android · Nadia_
